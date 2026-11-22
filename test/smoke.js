@@ -79,6 +79,25 @@ function check(name, cond, extra) {
   await page.click('[data-act="closeReader"]');
   await sleep(300);
 
+  // 第 2 大題（Q7+）：純聽力，作答只顯示 A B C D
+  await page.click('[data-act="jump"]');
+  await sleep(300);
+  await page.click('.jump button:nth-child(7)');
+  await sleep(400);
+  const hasHint = !!(await page.$('.audiohint'));
+  const rows7 = await page.$$eval('.optrow', els => els.length);
+  const tiles7 = await page.$$eval('.optgrid .opt', els => els.length);
+  check('第 2 大題只顯示 ABCD', hasHint && rows7 === 0 && tiles7 === 4, `hint=${hasHint} rows=${rows7} tiles=${tiles7}`);
+  check('第 2 大題不顯示題目文字', !(await page.$('.qtext')));
+  await page.screenshot({ path: path.join(SHOTS, '05-quiz-part2.png') });
+  await page.click('[data-act="stem"]');
+  await sleep(350);
+  const rows7b = await page.$$eval('.optrow', els => els.length);
+  check('按「顯示」才出現題目與選項文字', !!(await page.$('.qtext')) && rows7b === 3, 'rows=' + rows7b);
+  await page.screenshot({ path: path.join(SHOTS, '06-quiz-part2-shown.png') });
+  await page.click('[data-act="stem"]');
+  await sleep(250);
+
   await page.click('[data-act="jump"]');
   await sleep(300);
   await page.click('.jump button:nth-child(73)');

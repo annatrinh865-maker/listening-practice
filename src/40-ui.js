@@ -4,7 +4,7 @@ const S = {
   sets: [], set: null, screen: 'home',
   q: 0, filter: 'all', detailNo: null, overlay: null,
   reader: { page: 0, s: 1, tx: 0, ty: 0, col: 'full', bright: 100, contrast: 100 },
-  showZh: false,
+  showZh: false, showStem: false,
   imp: { pages: [], name: '', qFrom: 1, qTo: 30, busy: false, note: '' }
 };
 
@@ -109,6 +109,9 @@ function viewQuiz(isKey) {
   const opts = Q && Q.o ? Q.o : null;
   const letters = opts ? LETTERS.slice(0, opts.length) : LETTERS;
   const act = isKey ? 'setKey' : 'pick';
+  // 純聽力題（第 2 大題）：作答時只顯示 A B C D
+  const audioOnly = !!(Q && Q.a) && !S.showStem;
+  const showText = !!Q && !audioOnly;
   return `
   <div class="topbar">
     <button class="iconbtn" data-act="backSet">✕</button>
@@ -119,14 +122,16 @@ function viewQuiz(isKey) {
   <div class="qwrap">
     <div class="qhead">
       <div class="qno">${n}<small> 題</small></div>
-      ${Q && Q.zq ? `<button class="chipbtn ${S.showZh ? 'on' : ''}" data-act="zh">中文</button>` : ''}
+      ${Q && Q.zq && !audioOnly ? `<button class="chipbtn ${S.showZh ? 'on' : ''}" data-act="zh">中文</button>` : ''}
+      ${Q && Q.a ? `<button class="chipbtn ${S.showStem ? 'on' : ''}" data-act="stem">${S.showStem ? '隱藏' : '顯示'}</button>` : ''}
       <button class="btn" style="width:auto;padding:9px 13px;font-size:13px;margin-left:auto" data-act="openQ" data-v="${n}"><span class="ic">📄</span>原圖</button>
     </div>
-    ${Q ? `<div class="qtext">${esc(Q.q)}${S.showZh ? `<div class="zhtext">${esc(Q.zq)}</div>` : ''}</div>` : ''}
-    ${opts
+    ${audioOnly ? `<div class="audiohint"><span class="ah-ic">🎧</span><div><b>純聽力作答</b><span>聽音檔，選出最適合的回應。要看作答內容再按上面的「顯示」。</span></div></div>` : ''}
+    ${showText ? `<div class="qtext">${esc(Q.q)}${S.showZh ? `<div class="zhtext">${esc(Q.zq)}</div>` : ''}</div>` : ''}
+    ${opts && showText
       ? `<div class="optlist">${letters.map((L, i) => `<button class="optrow ${cur === L ? 'on' : ''}" data-act="${act}" data-v="${L}"><span class="ch">${L}</span><span class="txt">${esc(opts[i])}</span></button>`).join('')}</div>`
       : `<div class="optgrid">${LETTERS.map(L => `<button class="opt big ${cur === L ? 'on' : ''}" data-act="${act}" data-v="${L}">${L}</button>`).join('')}</div>`}
-    ${opts ? '' : `<div class="peek"><div class="peek-lbl">題目頁面 · 點一下放大</div><div class="peekrow">${st.pages.map((p, i) => `<button class="peekth ${i === S.reader.page ? 'on' : ''}" data-act="openPage" data-v="${i}"><img src="${p.url}" alt="第 ${i + 1} 頁"></button>`).join('')}</div></div>`}
+    ${opts && showText ? '' : (Q && Q.a ? '' : `<div class="peek"><div class="peek-lbl">題目頁面 · 點一下放大</div><div class="peekrow">${st.pages.map((p, i) => `<button class="peekth ${i === S.reader.page ? 'on' : ''}" data-act="openPage" data-v="${i}"><img src="${p.url}" alt="第 ${i + 1} 頁"></button>`).join('')}</div></div>`)}
     <div class="navrow">
       <button class="btn" data-act="prevQ" ${S.q === 0 ? 'disabled' : ''}>‹ 上一題</button>
       ${S.q >= total - 1
@@ -656,6 +661,7 @@ document.addEventListener('click', async e => {
     case 'detailNext': { const l = qlist(S.set), i = l.indexOf(S.detailNo); S.detailNo = l[Math.min(l.length - 1, i + 1)]; render(); break; }
     case 'readerOpen': S.overlay = 'reader'; render(); break;
     case 'zh': S.showZh = !S.showZh; render(); break;
+    case 'stem': S.showStem = !S.showStem; render(); break;
     case 'openQ': {
       const qn = +v;
       const idx = S.set.pages.findIndex(p => p.qFrom && p.qTo && qn >= p.qFrom && qn <= p.qTo);
