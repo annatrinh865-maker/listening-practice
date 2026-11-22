@@ -130,11 +130,21 @@ button { cursor: pointer; border: 0; background: none; }
 .opt.wrong { background: #fbeceb; border-color: var(--bad); }
 .opt.wrong .ch { background: var(--bad); color: #fff; }
 .opt .tag { margin-left: auto; font-size: 12px; font-weight: 800; }
-.optgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: auto; padding-top: 20px; }
+.optgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
 .opt.big {
   justify-content: center; padding: 0; min-height: 92px; font-size: 34px; font-weight: 900;
   letter-spacing: .02em;
 }
+.peek { margin-top: auto; padding-top: 18px; }
+.peek-lbl { font-size: 11.5px; color: var(--ink2); font-weight: 700; margin-bottom: 8px; letter-spacing: .04em; }
+.peekrow { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
+.peekrow::-webkit-scrollbar { display: none; }
+.peekth {
+  flex: none; width: 76px; aspect-ratio: 3 / 4; border-radius: 10px; overflow: hidden;
+  border: 2px solid transparent; background: #fff; padding: 0; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.peekth.on { border-color: var(--accent); }
+.peekth img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .navrow { display: flex; gap: 10px; margin-top: 0; padding-top: 16px; }
 .navrow .btn { padding: 14px; }
 
@@ -446,6 +456,10 @@ function viewQuiz(isKey) {
       <div class="qno">${n}<small> 題</small></div>
       <button class="btn" style="width:auto;padding:9px 13px;font-size:13px" data-act="readerOpen"><span class="ic">📄</span>看原圖</button>
     </div>
+    ${st.pages.length ? `<div class="peek">
+      <div class="peek-lbl">題目頁面 · 點一下放大</div>
+      <div class="peekrow">${st.pages.map((p, i) => `<button class="peekth ${i === S.reader.page ? 'on' : ''}" data-act="openPage" data-v="${i}"><img src="${p.url}" alt="第 ${i + 1} 頁"></button>`).join('')}</div>
+    </div>` : ''}
     <div class="optgrid">
       ${LETTERS.map(L => `<button class="opt big ${cur === L ? 'on' : ''}" data-act="${isKey ? 'setKey' : 'pick'}" data-v="${L}">${L}</button>`).join('')}
     </div>
@@ -959,6 +973,7 @@ document.addEventListener('click', async e => {
     case 'detailPrev': { const l = qlist(S.set), i = l.indexOf(S.detailNo); S.detailNo = l[Math.max(0, i - 1)]; render(); break; }
     case 'detailNext': { const l = qlist(S.set), i = l.indexOf(S.detailNo); S.detailNo = l[Math.min(l.length - 1, i + 1)]; render(); break; }
     case 'readerOpen': S.overlay = 'reader'; render(); break;
+    case 'openPage': S.reader.page = +v; S.reader.s = 1; S.reader.tx = 0; S.reader.ty = 0; S.reader.col = 'full'; S.overlay = 'reader'; render(); break;
     case 'closeReader': S.overlay = null; render(); break;
     case 'adjust': S.overlay = 'adjust'; render(); break;
     case 'readerPrev': S.reader.page = Math.max(0, S.reader.page - 1); S.reader.s = 1; S.reader.tx = 0; S.reader.ty = 0; render(); break;

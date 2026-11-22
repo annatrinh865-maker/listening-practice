@@ -112,6 +112,10 @@ function viewQuiz(isKey) {
       <div class="qno">${n}<small> 題</small></div>
       <button class="btn" style="width:auto;padding:9px 13px;font-size:13px" data-act="readerOpen"><span class="ic">📄</span>看原圖</button>
     </div>
+    ${st.pages.length ? `<div class="peek">
+      <div class="peek-lbl">題目頁面 · 點一下放大</div>
+      <div class="peekrow">${st.pages.map((p, i) => `<button class="peekth ${i === S.reader.page ? 'on' : ''}" data-act="openPage" data-v="${i}"><img src="${p.url}" alt="第 ${i + 1} 頁"></button>`).join('')}</div>
+    </div>` : ''}
     <div class="optgrid">
       ${LETTERS.map(L => `<button class="opt big ${cur === L ? 'on' : ''}" data-act="${isKey ? 'setKey' : 'pick'}" data-v="${L}">${L}</button>`).join('')}
     </div>
@@ -625,6 +629,7 @@ document.addEventListener('click', async e => {
     case 'detailPrev': { const l = qlist(S.set), i = l.indexOf(S.detailNo); S.detailNo = l[Math.max(0, i - 1)]; render(); break; }
     case 'detailNext': { const l = qlist(S.set), i = l.indexOf(S.detailNo); S.detailNo = l[Math.min(l.length - 1, i + 1)]; render(); break; }
     case 'readerOpen': S.overlay = 'reader'; render(); break;
+    case 'openPage': S.reader.page = +v; S.reader.s = 1; S.reader.tx = 0; S.reader.ty = 0; S.reader.col = 'full'; S.overlay = 'reader'; render(); break;
     case 'closeReader': S.overlay = null; render(); break;
     case 'adjust': S.overlay = 'adjust'; render(); break;
     case 'readerPrev': S.reader.page = Math.max(0, S.reader.page - 1); S.reader.s = 1; S.reader.tx = 0; S.reader.ty = 0; render(); break;
