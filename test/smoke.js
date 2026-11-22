@@ -231,7 +231,7 @@ function check(name, cond, extra) {
     await sleep(400);
   }
   check('選照片後進入框選畫面', !!(await page.$('[data-act="cropApply"]')));
-  const handles = await page.$$eval('.cropwrap circle.h', els => els.length);
+  const handles = await page.$$eval('.cropwrap .hdl', els => els.length);
   check('四個角點可以拉', handles === 4, 'h=' + handles);
   await page.screenshot({ path: path.join(SHOTS, '10-crop.png') });
   await page.click('[data-act="cropApply"]');
@@ -259,6 +259,23 @@ function check(name, cond, extra) {
   const truth = [[120, 90], [540, 140], [500, 720], [80, 660]];
   const err = det.reduce((m, p, i) => Math.max(m, Math.hypot(p[0] - truth[i][0], p[1] - truth[i][1])), 0);
   check('四角偵測誤差 < 60px', err < 60, 'err=' + Math.round(err) + ' pts=' + JSON.stringify(det));
+
+  // 自動校正傾斜：畫 4 度的文字行，偵測要抓 4 度、校正後要回到 0 度
+  const dsk = await page.evaluate(() => {
+    const c = document.createElement('canvas'); c.width = 900; c.height = 700;
+    const x = c.getContext('2d');
+    x.fillStyle = '#fff'; x.fillRect(0, 0, 900, 700);
+    x.fillStyle = '#222';
+    for (let y = 40; y < 660; y += 28) x.fillRect(60, y, 700, 8);
+    const r = document.createElement('canvas'); r.width = 900; r.height = 700;
+    const rx = r.getContext('2d');
+    rx.fillStyle = '#fff'; rx.fillRect(0, 0, 900, 700);
+    rx.translate(450, 350); rx.rotate(4 * Math.PI / 180); rx.drawImage(c, -450, -350);
+    const a1 = autoDeskewAngle(r);
+    const a2 = autoDeskewAngle(rotateCanvas(r, -a1));
+    return { a1, a2 };
+  });
+  check('自動校正傾斜 4°→0°', Math.abs(dsk.a1 - 4) < 1.2 && Math.abs(dsk.a2) < 1.2, 'a1=' + dsk.a1 + ' a2=' + dsk.a2);
   await page.click('#impName', { clickCount: 3 });
   await page.type('#impName', '講義掃描');
   await page.click('[data-act="create"]');

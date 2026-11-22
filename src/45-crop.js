@@ -1,4 +1,4 @@
-/* ===== 45-crop.js — 掃描框選（四角可拖） ===== */
+/* ===== 45-crop.js — 掃描框選（大顆好拖的角點 + 放大鏡） ===== */
 let CROP = null;
 
 async function openCrop(queue, target) {
@@ -23,11 +23,14 @@ function cropPolyPoints() {
 function cropHTML() {
   const c = CROP;
   if (!c || !c.imgW) return `<div class="crop"><div class="cbar">處理中…</div></div>`;
-  const r = Math.max(16, Math.round(c.imgW / 34));
+  const pctX = v => (v / c.imgW * 100).toFixed(3) + '%';
+  const pctY = v => (v / c.imgH * 100).toFixed(3) + '%';
+  const isFrame = isFrameQuad(c.corners, c.imgW, c.imgH);
   return `<div class="crop">
     <div class="cbar">
-      <button class="btn2" data-act="cropCancel">✕ 取消</button>
-      <div style="flex:1;text-align:center">第 ${c.idx + 1} / ${c.queue.length} 張 · 拉四個角對齊紙張</div>
+      <button class="btn2" data-act="cropCancel">✕</button>
+      <div class="ctitle">第 ${c.idx + 1} / ${c.queue.length} 張<span>${isFrame ? '書頁超出畫面，用整張就好（可拖角調整）' : '拖綠點對齊紙張四角'}</span></div>
+      <button class="btn2" data-act="cropFrame">整張</button>
       <button class="btn2" data-act="cropAuto">自動</button>
     </div>
     <div class="cropstage" id="cstage">
@@ -35,8 +38,9 @@ function cropHTML() {
         <img id="cimg" src="${c.queue[c.idx].url}" alt="">
         <svg id="csvg" viewBox="0 0 ${c.imgW} ${c.imgH}" preserveAspectRatio="none">
           <polygon class="quad" points="${cropPolyPoints()}"></polygon>
-          ${c.corners.map((pt, i) => `<circle class="h" data-i="${i}" cx="${pt[0]}" cy="${pt[1]}" r="${r}"></circle>`).join('')}
         </svg>
+        ${c.corners.map((pt, i) => `<div class="hdl" data-i="${i}" style="left:${pctX(pt[0])};top:${pctY(pt[1])}"><span></span></div>`).join('')}
+        <div class="loupe" id="cloupe"></div>
       </div>
     </div>
     <div class="cfoot">
@@ -50,53 +54,80 @@ function cropHTML() {
   </div>`;
 }
 
-/* 尺寸：把圖縮到放得進畫面，回報 scale */
 function sizeCrop() {
   const stage = document.getElementById('cstage');
   const wrap = document.getElementById('cwrap');
   if (!stage || !wrap || !CROP) return;
-  const pad = 8;
+  const pad = 10;
   const sw = stage.clientWidth - pad * 2;
   const sh = stage.clientHeight - pad * 2;
   const k = Math.min(sw / CROP.imgW, sh / CROP.imgH);
-  wrap.style.width = Math.round(CROP.imgW * k) + 'px';
-  wrap.style.height = Math.round(CROP.imgH * k) + 'px';
+  wrap.style.width = Math.max(40, Math.round(CROP.imgW * k)) + 'px';
+  wrap.style.height = Math.max(40, Math.round(CROP.imgH * k)) + 'px';
 }
 
 function bindCrop() {
   if (!CROP) return;
   sizeCrop();
   window.onresize = () => { if (S.screen === 'crop') sizeCrop(); };
+
+  const wrap = document.getElementById('cwrap');
   const svg = document.getElementById('csvg');
   const poly = svg && svg.querySelector('.quad');
-  if (!svg) return;
-  let dragIdx = -1;
+  const loupe = document.getElementById('cloupe');
+  const img = document.getElementById('cimg');
+  if (!wrap || !svg) return;
 
-  const toImg = e => {
-    const r = svg.getBoundingClientRect();
-    return [
-      (e.clientX - r.left) / r.width * CROP.imgW,
-      (e.clientY - r.top) / r.height * CROP.imgH
-    ];
+  const ZOOM = 3;
+
+  const paintLoupe = idx => {
+    if (!loupe || !img) return;
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    const x = CROP.corners[idx][0] / CROP.imgW * w;
+    const y = CROP.corners[idx][1] / CROP.imgH * h;
+    const R = 58;
+    loupe.style.backgroundImage = `url("${CROP.queue[CROP.idx].url}")`;
+    loupe.style.backgroundSize = `${Math.round(w * ZOOM)}px ${Math.round(h * ZOOM)}px`;
+    loupe.style.backgroundPosition = `${Math.round(R - x * ZOOM)}px ${Math.round(R - y * ZOOM)}px`;
+    loupe.classList.add('on');
+    loupe.classList.toggle('low', y / h < 0.4);
   };
-  svg.querySelectorAll('circle.h').forEach(cir => {
-    cir.addEventListener('pointerdown', e => {
-      e.preventDefault();
-      dragIdx = +cir.dataset.i;
-      cir.setPointerCapture(e.pointerId);
-    });
-    cir.addEventListener('pointermove', e => {
-      if (dragIdx !== +cir.dataset.i) return;
-      const [x, y] = toImg(e);
-      const cx = Math.max(0, Math.min(CROP.imgW, x));
-      const cy = Math.max(0, Math.min(CROP.imgH, y));
-      CROP.corners[+cir.dataset.i] = [Math.round(cx), Math.round(cy)];
-      cir.setAttribute('cx', cx);
-      cir.setAttribute('cy', cy);
+
+  wrap.querySelectorAll('.hdl').forEach(el => {
+    const i = +el.dataset.i;
+    let dragging = false;
+
+    const move = e => {
+      if (!dragging) return;
+      const r = wrap.getBoundingClientRect();
+      const nx = Math.max(0, Math.min(CROP.imgW, (e.clientX - r.left) / r.width * CROP.imgW));
+      const ny = Math.max(0, Math.min(CROP.imgH, (e.clientY - r.top) / r.height * CROP.imgH));
+      CROP.corners[i] = [Math.round(nx), Math.round(ny)];
+      el.style.left = (nx / CROP.imgW * 100).toFixed(3) + '%';
+      el.style.top = (ny / CROP.imgH * 100).toFixed(3) + '%';
       if (poly) poly.setAttribute('points', cropPolyPoints());
+      paintLoupe(i);
+    };
+
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragging = true;
+      el.classList.add('grab');
+      try { el.setPointerCapture(e.pointerId); } catch (err) { }
+      paintLoupe(i);
     });
-    cir.addEventListener('pointerup', e => { dragIdx = -1; });
-    cir.addEventListener('pointercancel', () => { dragIdx = -1; });
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', e => {
+      dragging = false;
+      el.classList.remove('grab');
+      if (loupe) loupe.classList.remove('on');
+    });
+    el.addEventListener('pointercancel', () => {
+      dragging = false;
+      el.classList.remove('grab');
+      if (loupe) loupe.classList.remove('on');
+    });
   });
 }
 

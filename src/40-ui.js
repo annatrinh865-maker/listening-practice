@@ -662,6 +662,11 @@ document.addEventListener('click', async e => {
       render(); break;
     }
     case 'cropFilter': { if (CROP) CROP.filter = v; render(); break; }
+    case 'cropFrame': {
+      if (!CROP) break;
+      CROP.corners = [[0, 0], [CROP.imgW, 0], [CROP.imgW, CROP.imgH], [0, CROP.imgH]];
+      render(); break;
+    }
     case 'cropApply': await cropApply(); break;
     case 'cropCancel': finishCrop(); break;
     case 'pickfiles': { const f = document.getElementById('fileIn'); if (f) f.click(); break; }

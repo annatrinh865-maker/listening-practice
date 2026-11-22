@@ -271,19 +271,26 @@ textarea.notes {
 
 /* ---------- 掃描框選 ---------- */
 .crop { position: fixed; inset: 0; background: #14130f; display: flex; flex-direction: column; z-index: 45; }
-.crop .cbar { display: flex; align-items: center; gap: 8px; padding: calc(var(--safe-t) + 10px) 12px 8px; color: #efe9dc; font-size: 12.5px; }
-.crop .cbar .btn2 { background: rgba(255,255,255,.1); color: #efe9dc; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 700; }
-.cropstage { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 8px; }
-.cropwrap { position: relative; line-height: 0; box-shadow: 0 4px 20px rgba(0,0,0,.5); }
-.cropwrap img { width: 100%; height: 100%; display: block; }
-.cropwrap svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.cropwrap .quad { fill: rgba(70,190,120,.14); stroke: #6fe3a3; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
-.cropwrap .h { fill: #6fe3a3; stroke: #10231a; stroke-width: 3; vector-effect: non-scaling-stroke; touch-action: none; cursor: grab; }
+.crop .cbar { display: flex; align-items: center; gap: 8px; padding: calc(var(--safe-t) + 10px) 12px 8px; color: #efe9dc; }
+.crop .cbar .btn2 { background: rgba(255,255,255,.12); color: #efe9dc; border-radius: 10px; padding: 10px 14px; font-size: 15px; font-weight: 800; }
+.crop .ctitle { flex: 1; text-align: center; font-size: 13px; font-weight: 700; line-height: 1.35; }
+.crop .ctitle span { display: block; font-size: 11px; font-weight: 500; color: #a8a294; margin-top: 2px; }
+.cropstage { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 10px; }
+.cropwrap { position: relative; line-height: 0; box-shadow: 0 4px 24px rgba(0,0,0,.55); touch-action: none; }
+.cropwrap img { width: 100%; height: 100%; display: block; pointer-events: none; }
+.cropwrap svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.cropwrap .quad { fill: rgba(70,190,120,.12); stroke: #6fe3a3; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+.hdl { position: absolute; width: 64px; height: 64px; transform: translate(-50%, -50%); display: grid; place-items: center; touch-action: none; cursor: grab; }
+.hdl span { width: 30px; height: 30px; border-radius: 50%; background: rgba(111,227,163,.85); border: 3px solid #0d2a1c; box-shadow: 0 2px 10px rgba(0,0,0,.6); }
+.hdl.grab span { background: #b6ffd4; transform: scale(1.15); }
+.loupe { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); width: 116px; height: 116px; border-radius: 50%; border: 3px solid #6fe3a3; box-shadow: 0 0 0 3px rgba(0,0,0,.55); background-repeat: no-repeat; pointer-events: none; display: none; }
+.loupe.on { display: block; }
+.loupe.low { bottom: auto; top: 8px; }
 .crop .cfoot { display: flex; align-items: center; gap: 8px; padding: 10px 12px calc(var(--safe-b) + 12px); }
-.crop .cfoot .seg2 { flex: 1; display: flex; gap: 4px; background: rgba(255,255,255,.08); padding: 4px; border-radius: 11px; }
-.crop .cfoot .seg2 button { flex: 1; color: #efe9dc; font-size: 12.5px; font-weight: 700; padding: 8px 4px; border-radius: 8px; }
-.crop .cfoot .seg2 button.on { background: rgba(255,255,255,.9); color: #14130f; }
-.crop .cfoot .btn2 { background: #6fe3a3; color: #10231a; border-radius: 11px; padding: 12px 16px; font-size: 14px; font-weight: 800; }
+.crop .cfoot .seg2 { flex: 1; display: flex; gap: 4px; background: rgba(255,255,255,.1); padding: 4px; border-radius: 11px; }
+.crop .cfoot .seg2 button { flex: 1; color: #efe9dc; font-size: 13px; font-weight: 700; padding: 10px 4px; border-radius: 8px; }
+.crop .cfoot .seg2 button.on { background: rgba(255,255,255,.92); color: #14130f; }
+.crop .cfoot .btn2 { background: #6fe3a3; color: #10231a; border-radius: 11px; padding: 14px 18px; font-size: 15px; font-weight: 800; }
 .crop .cfoot .btn2.strong { background: #6fe3a3; }
 
 #toast {
@@ -1080,6 +1087,11 @@ document.addEventListener('click', async e => {
       render(); break;
     }
     case 'cropFilter': { if (CROP) CROP.filter = v; render(); break; }
+    case 'cropFrame': {
+      if (!CROP) break;
+      CROP.corners = [[0, 0], [CROP.imgW, 0], [CROP.imgW, CROP.imgH], [0, CROP.imgH]];
+      render(); break;
+    }
     case 'cropApply': await cropApply(); break;
     case 'cropCancel': finishCrop(); break;
     case 'pickfiles': { const f = document.getElementById('fileIn'); if (f) f.click(); break; }
@@ -1213,7 +1225,7 @@ document.addEventListener('click', async e => {
 
 
 /* ==== 45-crop.js ==== */
-/* ===== 45-crop.js — 掃描框選（四角可拖） ===== */
+/* ===== 45-crop.js — 掃描框選（大顆好拖的角點 + 放大鏡） ===== */
 let CROP = null;
 
 async function openCrop(queue, target) {
@@ -1238,11 +1250,14 @@ function cropPolyPoints() {
 function cropHTML() {
   const c = CROP;
   if (!c || !c.imgW) return `<div class="crop"><div class="cbar">處理中…</div></div>`;
-  const r = Math.max(16, Math.round(c.imgW / 34));
+  const pctX = v => (v / c.imgW * 100).toFixed(3) + '%';
+  const pctY = v => (v / c.imgH * 100).toFixed(3) + '%';
+  const isFrame = isFrameQuad(c.corners, c.imgW, c.imgH);
   return `<div class="crop">
     <div class="cbar">
-      <button class="btn2" data-act="cropCancel">✕ 取消</button>
-      <div style="flex:1;text-align:center">第 ${c.idx + 1} / ${c.queue.length} 張 · 拉四個角對齊紙張</div>
+      <button class="btn2" data-act="cropCancel">✕</button>
+      <div class="ctitle">第 ${c.idx + 1} / ${c.queue.length} 張<span>${isFrame ? '書頁超出畫面，用整張就好（可拖角調整）' : '拖綠點對齊紙張四角'}</span></div>
+      <button class="btn2" data-act="cropFrame">整張</button>
       <button class="btn2" data-act="cropAuto">自動</button>
     </div>
     <div class="cropstage" id="cstage">
@@ -1250,8 +1265,9 @@ function cropHTML() {
         <img id="cimg" src="${c.queue[c.idx].url}" alt="">
         <svg id="csvg" viewBox="0 0 ${c.imgW} ${c.imgH}" preserveAspectRatio="none">
           <polygon class="quad" points="${cropPolyPoints()}"></polygon>
-          ${c.corners.map((pt, i) => `<circle class="h" data-i="${i}" cx="${pt[0]}" cy="${pt[1]}" r="${r}"></circle>`).join('')}
         </svg>
+        ${c.corners.map((pt, i) => `<div class="hdl" data-i="${i}" style="left:${pctX(pt[0])};top:${pctY(pt[1])}"><span></span></div>`).join('')}
+        <div class="loupe" id="cloupe"></div>
       </div>
     </div>
     <div class="cfoot">
@@ -1265,53 +1281,80 @@ function cropHTML() {
   </div>`;
 }
 
-/* 尺寸：把圖縮到放得進畫面，回報 scale */
 function sizeCrop() {
   const stage = document.getElementById('cstage');
   const wrap = document.getElementById('cwrap');
   if (!stage || !wrap || !CROP) return;
-  const pad = 8;
+  const pad = 10;
   const sw = stage.clientWidth - pad * 2;
   const sh = stage.clientHeight - pad * 2;
   const k = Math.min(sw / CROP.imgW, sh / CROP.imgH);
-  wrap.style.width = Math.round(CROP.imgW * k) + 'px';
-  wrap.style.height = Math.round(CROP.imgH * k) + 'px';
+  wrap.style.width = Math.max(40, Math.round(CROP.imgW * k)) + 'px';
+  wrap.style.height = Math.max(40, Math.round(CROP.imgH * k)) + 'px';
 }
 
 function bindCrop() {
   if (!CROP) return;
   sizeCrop();
   window.onresize = () => { if (S.screen === 'crop') sizeCrop(); };
+
+  const wrap = document.getElementById('cwrap');
   const svg = document.getElementById('csvg');
   const poly = svg && svg.querySelector('.quad');
-  if (!svg) return;
-  let dragIdx = -1;
+  const loupe = document.getElementById('cloupe');
+  const img = document.getElementById('cimg');
+  if (!wrap || !svg) return;
 
-  const toImg = e => {
-    const r = svg.getBoundingClientRect();
-    return [
-      (e.clientX - r.left) / r.width * CROP.imgW,
-      (e.clientY - r.top) / r.height * CROP.imgH
-    ];
+  const ZOOM = 3;
+
+  const paintLoupe = idx => {
+    if (!loupe || !img) return;
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    const x = CROP.corners[idx][0] / CROP.imgW * w;
+    const y = CROP.corners[idx][1] / CROP.imgH * h;
+    const R = 58;
+    loupe.style.backgroundImage = `url("${CROP.queue[CROP.idx].url}")`;
+    loupe.style.backgroundSize = `${Math.round(w * ZOOM)}px ${Math.round(h * ZOOM)}px`;
+    loupe.style.backgroundPosition = `${Math.round(R - x * ZOOM)}px ${Math.round(R - y * ZOOM)}px`;
+    loupe.classList.add('on');
+    loupe.classList.toggle('low', y / h < 0.4);
   };
-  svg.querySelectorAll('circle.h').forEach(cir => {
-    cir.addEventListener('pointerdown', e => {
-      e.preventDefault();
-      dragIdx = +cir.dataset.i;
-      cir.setPointerCapture(e.pointerId);
-    });
-    cir.addEventListener('pointermove', e => {
-      if (dragIdx !== +cir.dataset.i) return;
-      const [x, y] = toImg(e);
-      const cx = Math.max(0, Math.min(CROP.imgW, x));
-      const cy = Math.max(0, Math.min(CROP.imgH, y));
-      CROP.corners[+cir.dataset.i] = [Math.round(cx), Math.round(cy)];
-      cir.setAttribute('cx', cx);
-      cir.setAttribute('cy', cy);
+
+  wrap.querySelectorAll('.hdl').forEach(el => {
+    const i = +el.dataset.i;
+    let dragging = false;
+
+    const move = e => {
+      if (!dragging) return;
+      const r = wrap.getBoundingClientRect();
+      const nx = Math.max(0, Math.min(CROP.imgW, (e.clientX - r.left) / r.width * CROP.imgW));
+      const ny = Math.max(0, Math.min(CROP.imgH, (e.clientY - r.top) / r.height * CROP.imgH));
+      CROP.corners[i] = [Math.round(nx), Math.round(ny)];
+      el.style.left = (nx / CROP.imgW * 100).toFixed(3) + '%';
+      el.style.top = (ny / CROP.imgH * 100).toFixed(3) + '%';
       if (poly) poly.setAttribute('points', cropPolyPoints());
+      paintLoupe(i);
+    };
+
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragging = true;
+      el.classList.add('grab');
+      try { el.setPointerCapture(e.pointerId); } catch (err) { }
+      paintLoupe(i);
     });
-    cir.addEventListener('pointerup', e => { dragIdx = -1; });
-    cir.addEventListener('pointercancel', () => { dragIdx = -1; });
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', e => {
+      dragging = false;
+      el.classList.remove('grab');
+      if (loupe) loupe.classList.remove('on');
+    });
+    el.addEventListener('pointercancel', () => {
+      dragging = false;
+      el.classList.remove('grab');
+      if (loupe) loupe.classList.remove('on');
+    });
   });
 }
 
@@ -1343,7 +1386,7 @@ function finishCrop() {
 }
 
 /* ==== 50-scan.js ==== */
-/* ===== 50-scan.js — 掃描：找頁面四角 → 透視拉正 → 去陰影/白底 ===== */
+/* ===== 50-scan.js — 找頁面四角（Canny + 輪廓，跟掃描 App 同樣做法）→ 透視拉正 → 去陰影 ===== */
 
 function canvasOf(img) {
   const cv = document.createElement('canvas');
@@ -1361,40 +1404,332 @@ function loadImage(url) {
   });
 }
 
-/* ---- 1. 找文件四角（Otsu → 最大亮區 → 極值四點） ---- */
-function detectCorners(cv) {
-  const W = cv.width, H = cv.height;
-  const SW = 260;
-  const SH = Math.max(1, Math.round(H * SW / W));
-  const sc = document.createElement('canvas');
-  sc.width = SW; sc.height = SH;
-  const sx = sc.getContext('2d');
-  sx.drawImage(cv, 0, 0, SW, SH);
-  const d = sx.getImageData(0, 0, SW, SH).data;
-
-  const N = SW * SH;
-  const g = new Uint8Array(N);
-  const hist = new Array(256).fill(0);
+/* ---------- 影像處理小工具（純 JS，不用外部函式庫） ---------- */
+function graySmall(cv, SW) {
+  const k = SW / cv.width;
+  const SH = Math.max(1, Math.round(cv.height * k));
+  const c = document.createElement('canvas');
+  c.width = SW; c.height = SH;
+  const x = c.getContext('2d');
+  x.drawImage(cv, 0, 0, SW, SH);
+  const d = x.getImageData(0, 0, SW, SH).data;
+  const g = new Float32Array(SW * SH);
   for (let i = 0, p = 0; i < d.length; i += 4, p++) {
-    const v = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) | 0;
-    g[p] = v; hist[v]++;
+    g[p] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
   }
-  // Otsu
+  return { g, W: SW, H: SH };
+}
+
+function blur5(g, W, H) {
+  const K = [1, 4, 6, 4, 1], S = 16;
+  const t = new Float32Array(W * H), out = new Float32Array(W * H);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let a = 0;
+      for (let i = -2; i <= 2; i++) {
+        const xx = x + i < 0 ? 0 : x + i > W - 1 ? W - 1 : x + i;
+        a += g[y * W + xx] * K[i + 2];
+      }
+      t[y * W + x] = a / S;
+    }
+  }
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let a = 0;
+      for (let i = -2; i <= 2; i++) {
+        const yy = y + i < 0 ? 0 : y + i > H - 1 ? H - 1 : y + i;
+        a += t[yy * W + x] * K[i + 2];
+      }
+      out[y * W + x] = a / S;
+    }
+  }
+  return out;
+}
+
+function otsu(hist, total) {
   let sum = 0;
-  for (let v = 0; v < 256; v++) sum += v * hist[v];
+  for (let v = 0; v < hist.length; v++) sum += v * hist[v];
   let sumB = 0, wB = 0, best = -1, thr = 128;
-  for (let v = 0; v < 256; v++) {
+  for (let v = 0; v < hist.length; v++) {
     wB += hist[v];
     if (!wB) continue;
-    const wF = N - wB;
+    const wF = total - wB;
     if (!wF) break;
     sumB += v * hist[v];
     const mB = sumB / wB, mF = (sum - sumB) / wF;
     const between = wB * wF * (mB - mF) * (mB - mF);
     if (between > best) { best = between; thr = v; }
   }
+  return thr;
+}
 
-  // 最大連通亮區
+/* Canny：Sobel → 非極大值抑制 → 雙門檻遲滯 */
+function canny(g, W, H) {
+  const N = W * H;
+  const mag = new Float32Array(N), ang = new Float32Array(N);
+  for (let y = 1; y < H - 1; y++) {
+    for (let x = 1; x < W - 1; x++) {
+      const i = y * W + x;
+      const gx = (g[i - W + 1] + 2 * g[i + 1] + g[i + W + 1]) - (g[i - W - 1] + 2 * g[i - 1] + g[i + W - 1]);
+      const gy = (g[i + W - 1] + 2 * g[i + W] + g[i + W + 1]) - (g[i - W - 1] + 2 * g[i - W] + g[i - W + 1]);
+      mag[i] = Math.sqrt(gx * gx + gy * gy);
+      ang[i] = Math.atan2(gy, gx);
+    }
+  }
+  // 非極大值抑制
+  const thin = new Float32Array(N);
+  for (let y = 1; y < H - 1; y++) {
+    for (let x = 1; x < W - 1; x++) {
+      const i = y * W + x;
+      const m = mag[i];
+      if (m < 12) continue;
+      let a = ang[i] * 180 / Math.PI;
+      if (a < 0) a += 180;
+      let n1, n2;
+      if (a < 22.5 || a >= 157.5) { n1 = mag[i - 1]; n2 = mag[i + 1]; }
+      else if (a < 67.5) { n1 = mag[i - W + 1]; n2 = mag[i + W - 1]; }
+      else if (a < 112.5) { n1 = mag[i - W]; n2 = mag[i + W]; }
+      else { n1 = mag[i - W - 1]; n2 = mag[i + W + 1]; }
+      if (m >= n1 && m >= n2) thin[i] = m;
+    }
+  }
+  // 門檻（用 Otsu 自動決定，不用固定值）
+  const hist = new Array(256).fill(0);
+  for (let i = 0; i < N; i++) {
+    const v = thin[i] > 255 ? 255 : thin[i] | 0;
+    if (v > 0) hist[v]++;
+  }
+  let cnt = 0;
+  for (let v = 1; v < 256; v++) cnt += hist[v];
+  const hi = Math.max(24, otsu(hist, cnt));
+  const lo = hi * 0.45;
+
+  const edge = new Uint8Array(N);
+  const stack = new Int32Array(N);
+  let top = 0;
+  for (let i = 0; i < N; i++) if (thin[i] >= hi) { edge[i] = 2; stack[top++] = i; }
+  while (top) {
+    const cur = stack[--top];
+    const x = cur % W, y = (cur / W) | 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const ni = ny * W + nx;
+        if (!edge[ni] && thin[ni] >= lo) { edge[ni] = 1; stack[top++] = ni; }
+      }
+    }
+  }
+  for (let i = 0; i < N; i++) if (edge[i]) edge[i] = 1;
+  return edge;
+}
+
+/* 凸包（Andrew monotone chain） */
+function convexHull(points) {
+  const pts = points.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  if (pts.length < 4) return pts;
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower = [];
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
+    lower.push(p);
+  }
+  const upper = [];
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const p = pts[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  lower.pop(); upper.pop();
+  return lower.concat(upper);
+}
+
+function polyArea(pts) {
+  let s = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = pts[(i + 1) % pts.length];
+    s += a[0] * b[1] - b[0] * a[1];
+  }
+  return Math.abs(s) / 2;
+}
+
+/* Douglas-Peucker：把輪廓簡化成四邊形 */
+function dpLine(pts, a, b, eps, keep) {
+  let maxD = -1, idx = -1;
+  const dx = pts[b][0] - pts[a][0], dy = pts[b][1] - pts[a][1];
+  const len = Math.hypot(dx, dy) || 1;
+  for (let i = a + 1; i < b; i++) {
+    const d = Math.abs((pts[i][0] - pts[a][0]) * dy - (pts[i][1] - pts[a][1]) * dx) / len;
+    if (d > maxD) { maxD = d; idx = i; }
+  }
+  if (maxD > eps && idx > 0) {
+    dpLine(pts, a, idx, eps, keep);
+    dpLine(pts, idx, b, eps, keep);
+  } else keep.push(a);
+}
+function simplifyClosed(pts, eps) {
+  const n = pts.length;
+  if (n < 5) return pts.slice();
+  // 找最遠的兩點當切點
+  let i0 = 0, i1 = 0, best = -1;
+  for (let i = 0; i < n; i += Math.max(1, Math.round(n / 60))) {
+    for (let j = i + 1; j < n; j += Math.max(1, Math.round(n / 60))) {
+      const d = (pts[i][0] - pts[j][0]) ** 2 + (pts[i][1] - pts[j][1]) ** 2;
+      if (d > best) { best = d; i0 = i; i1 = j; }
+    }
+  }
+  const keep = [];
+  dpLine(pts, i0, i1, eps, keep);
+  keep.push(i1);
+  const rotated = pts.slice(i1).concat(pts.slice(0, i1 + 1));
+  dpLine(rotated, 0, rotated.length - 1, eps, keep);
+  return keep.map(i => pts[i]);
+}
+
+/* 4 個角排序成 TL, TR, BR, BL */
+function orderQuad(q) {
+  const sum = q.map(p => p[0] + p[1]);
+  const dif = q.map(p => p[0] - p[1]);
+  const TL = q[sum.indexOf(Math.min(...sum))];
+  const BR = q[sum.indexOf(Math.max(...sum))];
+  const TR = q[dif.indexOf(Math.max(...dif))];
+  const BL = q[dif.indexOf(Math.min(...dif))];
+  return [TL, TR, BR, BL];
+}
+
+function quadOk(pts, W, H) {
+  if (!pts || pts.length !== 4) return false;
+  const area = polyArea(pts);
+  if (area < W * H * 0.35 || area > W * H * 1.02) return false;
+  // 邊長不能太短（避免退化成三角形/一條線）
+  const diag = Math.hypot(W, H);
+  for (let i = 0; i < 4; i++) {
+    const a = pts[i], b = pts[(i + 1) % 4];
+    if (Math.hypot(a[0] - b[0], a[1] - b[1]) < diag * 0.08) return false;
+  }
+  // 凸性：每個轉角叉積同號
+  let sign = 0;
+  for (let i = 0; i < 4; i++) {
+    const a = pts[i], b = pts[(i + 1) % 4], c = pts[(i + 2) % 4];
+    const cr = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+    if (Math.abs(cr) < 1e-6) continue;
+    const s = cr > 0 ? 1 : -1;
+    if (!sign) sign = s; else if (s !== sign) return false;
+  }
+  return true;
+}
+
+/* 紙張是不是「撐滿畫面」（書頁超出鏡頭）：看四邊有多少比例是亮面 */
+function frameCoverage(cv) {
+  const SW = 200;
+  const { g, W, H } = graySmall(cv, SW);
+  const N = W * H;
+  const hist = new Array(256).fill(0);
+  for (let i = 0; i < N; i++) hist[g[i] | 0]++;
+  const thr = otsu(hist, N);
+  const bright = i => g[i] > thr;
+  let top = 0, bot = 0, left = 0, right = 0;
+  for (let x = 0; x < W; x++) {
+    if (bright(x)) top++;
+    if (bright((H - 1) * W + x)) bot++;
+  }
+  for (let y = 0; y < H; y++) {
+    if (bright(y * W)) left++;
+    if (bright(y * W + W - 1)) right++;
+  }
+  return [top / W, bot / W, left / H, right / H].filter(v => v > 0.55).length;
+}
+
+/* ---- 主偵測：Canny 邊緣 → 最大輪廓 → 四邊形（掃描 App 的做法） ---- */
+function detectByEdges(cv) {
+  const SW = Math.min(480, cv.width);
+  const { g, W, H } = graySmall(cv, SW);
+  const blurred = blur5(g, W, H);
+  const edge = canny(blurred, W, H);
+
+  // 連通分量（8 連通）
+  const N = W * H;
+  const label = new Int32Array(N);
+  const stack = new Int32Array(N);
+  const comps = [];
+  let id = 0;
+  for (let start = 0; start < N; start++) {
+    if (!edge[start] || label[start]) continue;
+    id++;
+    let top = 0, count = 0;
+    const px = [];
+    stack[top++] = start; label[start] = id;
+    while (top) {
+      const cur = stack[--top];
+      const x = cur % W, y = (cur / W) | 0;
+      if (px.length < 26000) px.push([x, y]);
+      count++;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (!dx && !dy) continue;
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+          const ni = ny * W + nx;
+          if (edge[ni] && !label[ni]) { label[ni] = id; stack[top++] = ni; }
+        }
+      }
+    }
+    if (px.length > 120) comps.push({ px, count });
+  }
+  if (!comps.length) return null;
+
+  // 由大到小檢查，找最大「看起來像四邊形」的輪廓
+  comps.sort((a, b) => b.px.length - a.px.length);
+  let best = null, bestArea = 0;
+  for (let ci = 0; ci < Math.min(comps.length, 12); ci++) {
+    const hull = convexHull(comps[ci].px);
+    if (hull.length < 4) continue;
+    const hullArea = polyArea(hull);
+    if (hullArea < N * 0.12) continue;
+    const peri = (() => {
+      let s = 0;
+      for (let i = 0; i < hull.length; i++) {
+        const a = hull[i], b = hull[(i + 1) % hull.length];
+        s += Math.hypot(a[0] - b[0], a[1] - b[1]);
+      }
+      return s;
+    })();
+    let quad = null;
+    for (let f = 0.01; f <= 0.3; f += 0.01) {
+      const s = simplifyClosed(hull, peri * f);
+      if (s.length === 4) { quad = s; break; }
+      if (s.length < 4) break;
+    }
+    if (!quad) {
+      // 退而求其次：凸包上四個對角極值
+      const sum = hull.map(p => p[0] + p[1]);
+      const dif = hull.map(p => p[0] - p[1]);
+      quad = [
+        hull[sum.indexOf(Math.min(...sum))],
+        hull[dif.indexOf(Math.max(...dif))],
+        hull[sum.indexOf(Math.max(...sum))],
+        hull[dif.indexOf(Math.min(...dif))]
+      ];
+    }
+    quad = orderQuad(quad);
+    if (quadOk(quad, W, H) && hullArea > bestArea) { best = quad; bestArea = hullArea; }
+  }
+  if (!best) return null;
+  const kx = cv.width / W, ky = cv.height / H;
+  return best.map(p => [Math.round(p[0] * kx), Math.round(p[1] * ky)]);
+}
+
+/* ---- 備援：亮度門檻（紙面比桌面亮時有效；陰影或亮桌面會失敗） ---- */
+function detectByBright(cv) {
+  const W = cv.width, H = cv.height;
+  const SW = 260;
+  const { g, W: w, H: h } = graySmall(cv, SW);
+  const N = w * h;
+  const hist = new Array(256).fill(0);
+  for (let i = 0; i < N; i++) hist[g[i] | 0]++;
+  const thr = otsu(hist, N);
+
   const seen = new Uint8Array(N);
   const stack = new Int32Array(N);
   let bestPixels = null, bestCount = 0;
@@ -1406,56 +1741,62 @@ function detectCorners(cv) {
     while (top) {
       const cur = stack[--top];
       list.push(cur); count++;
-      const x = cur % SW, y = (cur / SW) | 0;
+      const x = cur % w, y = (cur / w) | 0;
       if (x > 0 && !seen[cur - 1] && g[cur - 1] > thr) { seen[cur - 1] = 1; stack[top++] = cur - 1; }
-      if (x < SW - 1 && !seen[cur + 1] && g[cur + 1] > thr) { seen[cur + 1] = 1; stack[top++] = cur + 1; }
-      if (y > 0 && !seen[cur - SW] && g[cur - SW] > thr) { seen[cur - SW] = 1; stack[top++] = cur - SW; }
-      if (y < SH - 1 && !seen[cur + SW] && g[cur + SW] > thr) { seen[cur + SW] = 1; stack[top++] = cur + SW; }
+      if (x < w - 1 && !seen[cur + 1] && g[cur + 1] > thr) { seen[cur + 1] = 1; stack[top++] = cur + 1; }
+      if (y > 0 && !seen[cur - w] && g[cur - w] > thr) { seen[cur - w] = 1; stack[top++] = cur - w; }
+      if (y < h - 1 && !seen[cur + w] && g[cur + w] > thr) { seen[cur + w] = 1; stack[top++] = cur + w; }
     }
     if (count > bestCount) { bestCount = count; bestPixels = list; }
   }
-
-  const fallback = [[0, 0], [W, 0], [W, H], [0, H]];
-  if (!bestPixels || bestCount < N * 0.18) return fallback;
+  if (!bestPixels || bestCount < N * 0.15) return null;
 
   let minS = 1e9, maxS = -1e9, minD = 1e9, maxD = -1e9;
-  // 用「最極端的一小群點的平均」當角點，避免單一雜點把角拉歪
-  const k = Math.max(6, Math.floor(bestPixels.length * 0.004));
-  const pick = (metric, dir) => {
-    const arr = [];
-    for (let i = 0; i < bestPixels.length; i++) {
-      const idx = bestPixels[i];
-      const x = idx % SW, y = (idx / SW) | 0;
-      const v = dir * metric(x, y);
-      if (arr.length < k) { arr.push([v, x, y]); if (arr.length === k) arr.sort((a, b) => a[0] - b[0]); }
-      else if (v < arr[k - 1][0]) { arr[k - 1] = [v, x, y]; arr.sort((a, b) => a[0] - b[0]); }
-    }
-    if (!arr.length) return null;
-    let sx = 0, sy = 0;
-    for (const p of arr) { sx += p[1]; sy += p[2]; }
-    return [sx / arr.length, sy / arr.length];
-  };
-  const TL = pick((x, y) => x + y, 1);
-  const BR = pick((x, y) => x + y, -1);
-  const TR = pick((x, y) => x - y, -1);
-  const BL = pick((x, y) => x - y, 1);
-  if (!TL || !TR || !BR || !BL) return fallback;
-  const kx = W / SW, ky = H / SH;
-  const pts = [TL, TR, BR, BL].map(p => [Math.round(p[0] * kx), Math.round(p[1] * ky)]);
-  // 面積太小 → 用整張
-  const area = Math.abs(
-    (pts[0][0] * pts[1][1] - pts[1][0] * pts[0][1]) + (pts[1][0] * pts[2][1] - pts[2][0] * pts[1][1]) +
-    (pts[2][0] * pts[3][1] - pts[3][0] * pts[2][1]) + (pts[3][0] * pts[0][1] - pts[0][0] * pts[3][1])
-  ) / 2;
-  if (area < W * H * 0.2) return fallback;
-  // 往外放 1.5%：自動偵測容易往內縮，寧可多留一點白邊也不要切到字
-  const cx0 = (pts[0][0] + pts[1][0] + pts[2][0] + pts[3][0]) / 4;
-  const cy0 = (pts[0][1] + pts[1][1] + pts[2][1] + pts[3][1]) / 4;
-  const grow = 1.015;
+  let TL = null, BR = null, TR = null, BL = null;
+  for (let i = 0; i < bestPixels.length; i++) {
+    const idx = bestPixels[i];
+    const x = idx % w, y = (idx / w) | 0;
+    const s = x + y, df = x - y;
+    if (s < minS) { minS = s; TL = [x, y]; }
+    if (s > maxS) { maxS = s; BR = [x, y]; }
+    if (df > maxD) { maxD = df; TR = [x, y]; }
+    if (df < minD) { minD = df; BL = [x, y]; }
+  }
+  if (!TL || !TR || !BR || !BL) return null;
+  const kx = W / w, ky = H / h;
+  return [TL, TR, BR, BL].map(p => [Math.round(p[0] * kx), Math.round(p[1] * ky)]);
+}
+
+function growQuad(pts, W, H, k) {
+  const cx = (pts[0][0] + pts[1][0] + pts[2][0] + pts[3][0]) / 4;
+  const cy = (pts[0][1] + pts[1][1] + pts[2][1] + pts[3][1]) / 4;
   return pts.map(p => [
-    Math.max(0, Math.min(W, Math.round(cx0 + (p[0] - cx0) * grow))),
-    Math.max(0, Math.min(H, Math.round(cy0 + (p[1] - cy0) * grow)))
+    Math.max(0, Math.min(W, Math.round(cx + (p[0] - cx) * k))),
+    Math.max(0, Math.min(H, Math.round(cy + (p[1] - cy) * k)))
   ]);
+}
+
+/* ---- 對外：找四角 ---- */
+function detectCorners(cv) {
+  const W = cv.width, H = cv.height;
+  const frame = [[0, 0], [W, 0], [W, H], [0, H]];
+  // 書頁超出鏡頭（三邊以上都是紙）→ 不裁，直接整張
+  try { if (frameCoverage(cv) >= 3) return frame; } catch (err) { }
+  try {
+    const e = detectByEdges(cv);
+    if (e && quadOk(e, W, H) && quadInsideFrame(e, W, H)) return growQuad(e, W, H, 1.004);
+  } catch (err) { /* 邊緣法失敗就換備援 */ }
+  try {
+    const b = detectByBright(cv);
+    if (b && quadOk(b, W, H) && quadInsideFrame(b, W, H)) return growQuad(b, W, H, 1.02);
+  } catch (err) { /* 備援也失敗就用整張 */ }
+  return frame;
+}
+
+/* 四個角都要離畫面邊緣夠遠，否則代表紙張其實超出鏡頭（硬裁會切到字） */
+function quadInsideFrame(pts, W, H) {
+  const mx = W * 0.03, my = H * 0.03;
+  return pts.every(p => p[0] > mx && p[0] < W - mx && p[1] > my && p[1] < H - my);
 }
 
 /* ---- 2. 透視校正（四邊形 → 矩形） ---- */
@@ -1465,7 +1806,10 @@ function solve8(A, b) {
     let piv = i;
     for (let r = i + 1; r < n; r++) if (Math.abs(A[r][i]) > Math.abs(A[piv][i])) piv = r;
     if (Math.abs(A[piv][i]) < 1e-9) return null;
-    if (piv !== i) { const t = A[i]; A[i] = A[piv]; A[piv] = t; const tb = b[i]; b[i] = b[piv]; b[piv] = tb; }
+    if (piv !== i) {
+      const t = A[i]; A[i] = A[piv]; A[piv] = t;
+      const tb = b[i]; b[i] = b[piv]; b[piv] = tb;
+    }
     for (let r = 0; r < n; r++) {
       if (r === i) continue;
       const f = A[r][i] / A[i][i];
@@ -1480,10 +1824,10 @@ function solve8(A, b) {
 }
 
 function warpPerspective(srcCv, corners, maxSide) {
-  const [p0, p1, p2, p3] = corners;
+  const p = corners;
   const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
-  let outW = Math.round(Math.max(dist(p0, p1), dist(p3, p2)));
-  let outH = Math.round(Math.max(dist(p0, p3), dist(p1, p2)));
+  let outW = Math.round(Math.max(dist(p[0], p[1]), dist(p[3], p[2])));
+  let outH = Math.round(Math.max(dist(p[0], p[3]), dist(p[1], p[2])));
   const cap = maxSide || 2200;
   const k = Math.min(1, cap / Math.max(outW, outH));
   outW = Math.max(80, Math.round(outW * k));
@@ -1492,7 +1836,8 @@ function warpPerspective(srcCv, corners, maxSide) {
   const dst = [[0, 0], [outW, 0], [outW, outH], [0, outH]];
   const A = [], b = [];
   for (let i = 0; i < 4; i++) {
-    const [u, v] = dst[i], [x, y] = [p0, p1, p2, p3][i];
+    const u = dst[i][0], v = dst[i][1];
+    const x = p[i][0], y = p[i][1];
     A.push([u, v, 1, 0, 0, 0, -u * x, -v * x]); b.push(x);
     A.push([0, 0, 0, u, v, 1, -u * y, -v * y]); b.push(y);
   }
@@ -1502,8 +1847,7 @@ function warpPerspective(srcCv, corners, maxSide) {
   const ox = out.getContext('2d');
   if (!h) { ox.drawImage(srcCv, 0, 0, outW, outH); return out; }
 
-  const sctx = srcCv.getContext('2d');
-  const sd = sctx.getImageData(0, 0, srcCv.width, srcCv.height).data;
+  const sd = srcCv.getContext('2d').getImageData(0, 0, srcCv.width, srcCv.height).data;
   const SW = srcCv.width, SH = srcCv.height;
   const dstImg = ox.createImageData(outW, outH);
   const od = dstImg.data;
@@ -1511,11 +1855,11 @@ function warpPerspective(srcCv, corners, maxSide) {
   for (let v = 0; v < outH; v++) {
     const rowBase = v * outW * 4;
     for (let u = 0; u < outW; u++) {
-      const den = h[6] * u + h[7] * v + 1;
+      const den = h[6] * u + h[7] * v + 1 || 1e-6;
       const sxf = (h[0] * u + h[1] * v + h[2]) / den;
       const syf = (h[3] * u + h[4] * v + h[5]) / den;
       const di = rowBase + u * 4;
-      if (sxf < 0 || syf < 0 || sxf >= SW - 1 || syf >= SH - 1) {
+      if (!(sxf >= 0 && syf >= 0 && sxf < SW - 1 && syf < SH - 1)) {
         od[di] = od[di + 1] = od[di + 2] = 255; od[di + 3] = 255;
         continue;
       }
@@ -1535,78 +1879,188 @@ function warpPerspective(srcCv, corners, maxSide) {
   return out;
 }
 
-/* ---- 3. 去陰影 / 白底 / 二值化 ---- */
+/* ---- 3. 去陰影 / 白底 ---- */
+/* 用可分離的 box 濾波算「局部背景亮度」，記憶體只要灰階 + 一層累加緩衝 */
+function localMean(gray, W, H, r) {
+  const hs = new Float32Array(W * H);
+  for (let y = 0; y < H; y++) {
+    const row = y * W;
+    let sum = 0;
+    for (let x = -r; x <= r; x++) sum += gray[row + Math.min(W - 1, Math.max(0, x))];
+    const n = 2 * r + 1;
+    for (let x = 0; x < W; x++) {
+      hs[row + x] = sum / n;
+      const outX = x - r, inX = x + r + 1;
+      sum += gray[row + (inX > W - 1 ? W - 1 : inX)] - gray[row + (outX < 0 ? 0 : outX)];
+    }
+  }
+  const out = new Float32Array(W * H);
+  const n = 2 * r + 1;
+  for (let x = 0; x < W; x++) {
+    let sum = 0;
+    for (let y = -r; y <= r; y++) sum += hs[Math.min(H - 1, Math.max(0, y)) * W + x];
+    for (let y = 0; y < H; y++) {
+      out[y * W + x] = sum / n;
+      const outY = y - r, inY = y + r + 1;
+      sum += hs[(inY > H - 1 ? H - 1 : inY) * W + x] - hs[(outY < 0 ? 0 : outY) * W + x];
+    }
+  }
+  return out;
+}
+
 function enhanceCanvas(cv, mode) {
-  if (!mode || mode === 'color') return cv;
+  if (!mode || mode === 'color') {
+    // 彩色：只做白平衡式的提亮，不動內容
+    const cx = cv.getContext('2d');
+    const img = cx.getImageData(0, 0, cv.width, cv.height);
+    const a = img.data;
+    for (let i = 0; i < a.length; i += 4) {
+      a[i] = Math.min(255, a[i] * 1.06 + 6);
+      a[i + 1] = Math.min(255, a[i + 1] * 1.06 + 6);
+      a[i + 2] = Math.min(255, a[i + 2] * 1.06 + 6);
+    }
+    cx.putImageData(img, 0, 0);
+    return cv;
+  }
   const cx = cv.getContext('2d');
   const W = cv.width, H = cv.height;
   const img = cx.getImageData(0, 0, W, H);
   const a = img.data;
-  const n = W * H;
-
-  const L = new Float32Array(n);
+  const gray = new Uint8Array(W * H);
   for (let i = 0, p = 0; i < a.length; i += 4, p++) {
-    L[p] = a[i] * 0.299 + a[i + 1] * 0.587 + a[i + 2] * 0.114;
+    gray[p] = (a[i] * 0.299 + a[i + 1] * 0.587 + a[i + 2] * 0.114) | 0;
   }
+  const r = Math.max(8, Math.round(Math.max(W, H) / 45));
+  const mean = localMean(gray, W, H, r);
 
-  const W1 = W + 1;
-  const S1 = new Float64Array((n) + W1 * 2);
-  const S2 = new Float64Array((n) + W1 * 2);
-  for (let y = 0; y < H; y++) {
-    let rs = 0, rq = 0;
-    const rowBase = (y + 1) * W1, prevBase = y * W1;
-    for (let x = 0; x < W; x++) {
-      const v = L[y * W + x];
-      rs += v; rq += v * v;
-      S1[rowBase + x + 1] = S1[prevBase + x + 1] + rs;
-      S2[rowBase + x + 1] = S2[prevBase + x + 1] + rq;
-    }
-  }
-  const rect = (S, x0, y0, x1, y1) => S[y1 * W1 + x1] - S[y0 * W1 + x1] - S[y1 * W1 + x0] + S[y0 * W1 + x0];
-
-  const r = Math.max(10, Math.round(W / 24));
-  const k = 0.2, R = 128;
-  const out = new Uint8ClampedArray(n);
-
-  for (let y = 0; y < H; y++) {
-    const y0 = y - r < 0 ? 0 : y - r;
-    const y1 = y + r + 1 > H ? H : y + r + 1;
-    for (let x = 0; x < W; x++) {
-      const x0 = x - r < 0 ? 0 : x - r;
-      const x1 = x + r + 1 > W ? W : x + r + 1;
-      const cnt = (x1 - x0) * (y1 - y0);
-      const mean = rect(S1, x0, y0, x1, y1) / cnt;
-      const v = L[y * W + x];
-      let gv;
-      if (mode === 'bw') {
-        const sq = rect(S2, x0, y0, x1, y1);
-        const std = Math.sqrt(Math.max(0, sq / cnt - mean * mean));
-        const T = mean * (1 + k * (std / R - 1));
-        gv = v > T ? 255 : 0;
-      } else {
-        gv = mean > 4 ? (v / mean) * 244 : v;
-        if (gv > 226) gv = 255;
-        if (gv < 3) gv = 0;
+  for (let i = 0, p = 0; i < a.length; i += 4, p++) {
+    const m = mean[p];
+    const v = gray[p];
+    let g;
+    if (m < 6) g = v;
+    else {
+      const ratio = v / m;              // 1 = 跟背景一樣亮（紙）→ 白
+      if (mode === 'bw') g = ratio > 0.86 ? 255 : (ratio > 0.72 ? 120 : 0);
+      else {
+        g = ratio * 246;
+        if (g > 232) g = 255;
+        if (g < 4) g = 0;
       }
-      out[y * W + x] = gv;
     }
-  }
-
-  for (let i = 0, p = 0; i < a.length; i += 4, p++) {
-    a[i] = a[i + 1] = a[i + 2] = out[p];
+    a[i] = a[i + 1] = a[i + 2] = g;
     a[i + 3] = 255;
   }
   cx.putImageData(img, 0, 0);
   return cv;
 }
 
+/* ---- 自動校正傾斜：找讓「每一列亮度差最大」的角度 ---- */
+function autoDeskewAngle(cv) {
+  const SW = 360;
+  const { g, W, H } = graySmall(cv, SW);
+  const b = blur5(g, W, H);
+  const y0 = Math.round(H * 0.08), y1 = Math.round(H * 0.92);
+  const x0 = Math.round(W * 0.1), x1 = Math.round(W * 0.9);
+  let bestA = 0, bestScore = -1;
+  for (let a = -7; a <= 7.001; a += 0.5) {
+    const rad = a * Math.PI / 180, cos = Math.cos(rad), sin = Math.sin(rad);
+    const prof = [];
+    for (let y = y0; y < y1; y++) {
+      let s = 0, n = 0;
+      const dy = y - H / 2;
+      for (let x = x0; x < x1; x += 2) {
+        const dx = x - W / 2;
+        const sx = Math.round(dx * cos - dy * sin + W / 2);
+        const sy = Math.round(dx * sin + dy * cos + H / 2);
+        if (sx < 0 || sy < 0 || sx >= W || sy >= H) continue;
+        s += b[sy * W + sx]; n++;
+      }
+      if (n > (x1 - x0) * 0.4) prof.push(s / n);
+    }
+    if (prof.length < (y1 - y0) * 0.6) continue;
+    // 相鄰列差異的平方和：文字行對齊時最大
+    let score = 0;
+    for (let i = 1; i < prof.length; i++) {
+      const d = prof[i] - prof[i - 1];
+      score += d * d;
+    }
+    if (score > bestScore) { bestScore = score; bestA = a; }
+  }
+  return bestA;
+}
+
+function rotateCanvas(cv, deg) {
+  if (Math.abs(deg) < 0.2) return cv;
+  const rad = deg * Math.PI / 180;
+  const W = cv.width, H = cv.height;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const o = out.getContext('2d');
+  o.fillStyle = '#ffffff';
+  o.fillRect(0, 0, W, H);
+  o.translate(W / 2, H / 2);
+  o.rotate(rad);
+  o.drawImage(cv, -W / 2, -H / 2);
+  return out;
+}
+
+/* 切掉旋轉後留下的白邊 */
+function cropWhite(cv) {
+  const W = cv.width, H = cv.height;
+  const d = cv.getContext('2d').getImageData(0, 0, W, H).data;
+  let x0 = W, y0 = H, x1 = 0, y1 = 0;
+  for (let y = 0; y < H; y += 2) {
+    for (let x = 0; x < W; x += 2) {
+      const i = (y * W + x) * 4;
+      if (d[i] < 240 || d[i + 1] < 240 || d[i + 2] < 240) {
+        if (x < x0) x0 = x; if (x > x1) x1 = x;
+        if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+    }
+  }
+  if (x1 - x0 < W * 0.5 || y1 - y0 < H * 0.5) return cv;
+  const cw = Math.min(W, x1 + 2) - Math.max(0, x0 - 2);
+  const ch = Math.min(H, y1 + 2) - Math.max(0, y0 - 2);
+  if (cw > W * 0.985 && ch > H * 0.985) return cv;
+  const out = document.createElement('canvas');
+  out.width = cw; out.height = ch;
+  out.getContext('2d').drawImage(cv, Math.max(0, x0 - 2), Math.max(0, y0 - 2), cw, ch, 0, 0, cw, ch);
+  return out;
+}
+
+function shrinkTo(cv, maxSide) {
+  const m = Math.max(cv.width, cv.height);
+  if (m <= maxSide) return cv;
+  const k = maxSide / m;
+  const out = document.createElement('canvas');
+  out.width = Math.round(cv.width * k);
+  out.height = Math.round(cv.height * k);
+  const o = out.getContext('2d');
+  o.imageSmoothingQuality = 'high';
+  o.drawImage(cv, 0, 0, out.width, out.height);
+  return out;
+}
+
+function isFrameQuad(pts, W, H) {
+  return polyArea(pts) > W * H * 0.985;
+}
+
 /* 一步完成：拉正 + 增強，回傳 dataURL */
 async function scanPage(url, corners, mode) {
   const im = await loadImage(url);
-  const src = canvasOf(im);
-  const warped = warpPerspective(src, corners || detectCorners(src), 2200);
-  enhanceCanvas(warped, mode);
-  return { url: warped.toDataURL('image/jpeg', 0.85), w: warped.width, h: warped.height };
+  let src = canvasOf(im);
+  const quad = corners || detectCorners(src);
+  let out;
+  if (isFrameQuad(quad, src.width, src.height)) {
+    // 書頁超出畫面 → 不裁切；只把文字校正成水平、切掉旋轉白邊
+    src = shrinkTo(src, 2200);
+    const ang = autoDeskewAngle(src);
+    out = Math.abs(ang) >= 0.5 ? cropWhite(rotateCanvas(src, -ang)) : src;
+  } else {
+    out = warpPerspective(src, quad, 2200);
+  }
+  enhanceCanvas(out, mode);
+  return { url: out.toDataURL('image/jpeg', 0.85), w: out.width, h: out.height };
 }
 
 /* ---- 4. 匯出 PDF（用瀏覽器列印 → 存成 PDF） ---- */
