@@ -4,6 +4,7 @@ const S = {
   sets: [], set: null, screen: 'home',
   q: 0, filter: 'all', detailNo: null, overlay: null,
   reader: { page: 0, s: 1, tx: 0, ty: 0, col: 'full', bright: 100, contrast: 100 },
+  showZh: false,
   imp: { pages: [], name: '', qFrom: 1, qTo: 30, busy: false, note: '' }
 };
 
@@ -55,7 +56,10 @@ function viewHome() {
     </div>
     ${S.sets.length ? S.sets.map(setCard).join('') : `<div class="empty">還沒有題組。<br><br>按下面「新增題組」，<br>一次選好幾張題目截圖就可以開始。</div>`}
   </div>
-  <div class="fabwrap"><button class="btn primary" data-act="new"><span class="ic">＋</span>新增題組</button></div>`;
+  <div class="fabwrap">
+    ${S.sets.some(s => s.builtin) ? '' : `<button class="btn" data-act="addBuiltin" style="margin-bottom:10px"><span class="ic">📚</span>加入內建 Test 1（73 題）</button>`}
+    <button class="btn primary" data-act="new"><span class="ic">＋</span>新增題組</button>
+  </div>`;
 }
 
 /* ---------- 題組主頁 ---------- */
@@ -98,8 +102,13 @@ function viewQuiz(isKey) {
   const st = S.set, list = qlist(st), total = list.length;
   S.q = Math.max(0, Math.min(total - 1, S.q));
   const n = list[S.q];
-  const cur = (isKey ? st.key : st.answers)[n] || '';
-  const ans = list.filter(x => (isKey ? st.key : st.answers)[x]).length;
+  const src = isKey ? st.key : st.answers;
+  const cur = src[n] || '';
+  const ans = list.filter(x => src[x]).length;
+  const Q = (st.questions || {})[n];
+  const opts = Q && Q.o ? Q.o : null;
+  const letters = opts ? LETTERS.slice(0, opts.length) : LETTERS;
+  const act = isKey ? 'setKey' : 'pick';
   return `
   <div class="topbar">
     <button class="iconbtn" data-act="backSet">✕</button>
@@ -110,15 +119,14 @@ function viewQuiz(isKey) {
   <div class="qwrap">
     <div class="qhead">
       <div class="qno">${n}<small> 題</small></div>
-      <button class="btn" style="width:auto;padding:9px 13px;font-size:13px" data-act="readerOpen"><span class="ic">📄</span>看原圖</button>
+      ${Q && Q.zq ? `<button class="chipbtn ${S.showZh ? 'on' : ''}" data-act="zh">中文</button>` : ''}
+      <button class="btn" style="width:auto;padding:9px 13px;font-size:13px;margin-left:auto" data-act="openQ" data-v="${n}"><span class="ic">📄</span>原圖</button>
     </div>
-    ${st.pages.length ? `<div class="peek">
-      <div class="peek-lbl">題目頁面 · 點一下放大</div>
-      <div class="peekrow">${st.pages.map((p, i) => `<button class="peekth ${i === S.reader.page ? 'on' : ''}" data-act="openPage" data-v="${i}"><img src="${p.url}" alt="第 ${i + 1} 頁"></button>`).join('')}</div>
-    </div>` : ''}
-    <div class="optgrid">
-      ${LETTERS.map(L => `<button class="opt big ${cur === L ? 'on' : ''}" data-act="${isKey ? 'setKey' : 'pick'}" data-v="${L}">${L}</button>`).join('')}
-    </div>
+    ${Q ? `<div class="qtext">${esc(Q.q)}${S.showZh ? `<div class="zhtext">${esc(Q.zq)}</div>` : ''}</div>` : ''}
+    ${opts
+      ? `<div class="optlist">${letters.map((L, i) => `<button class="optrow ${cur === L ? 'on' : ''}" data-act="${act}" data-v="${L}"><span class="ch">${L}</span><span class="txt">${esc(opts[i])}</span></button>`).join('')}</div>`
+      : `<div class="optgrid">${LETTERS.map(L => `<button class="opt big ${cur === L ? 'on' : ''}" data-act="${act}" data-v="${L}">${L}</button>`).join('')}</div>`}
+    ${opts ? '' : `<div class="peek"><div class="peek-lbl">題目頁面 · 點一下放大</div><div class="peekrow">${st.pages.map((p, i) => `<button class="peekth ${i === S.reader.page ? 'on' : ''}" data-act="openPage" data-v="${i}"><img src="${p.url}" alt="第 ${i + 1} 頁"></button>`).join('')}</div></div>`}
     <div class="navrow">
       <button class="btn" data-act="prevQ" ${S.q === 0 ? 'disabled' : ''}>‹ 上一題</button>
       ${S.q >= total - 1
@@ -186,6 +194,14 @@ function viewDetail() {
   const k = st.key[n], a = st.answers[n];
   const good = k && a === k;
   const note = (st.notes && st.notes[n]) || '';
+  const Q = (st.questions || {})[n];
+  const letters = Q && Q.o ? LETTERS.slice(0, Q.o.length) : LETTERS;
+
+  const optRows = (arr, zh) => arr ? `<div class="dopts">${letters.map((L, idx) => {
+    const cls = [L === k ? 'right' : '', L === a && L !== k ? 'wrong' : ''].join(' ');
+    return `<div class="dopt ${cls}${zh ? ' zh' : ''}"><span class="ch">${L}</span><span class="txt">${esc(arr[idx] || '')}</span>${L === k ? '<span class="tag">正解</span>' : ''}</div>`;
+  }).join('')}</div>` : '';
+
   return `
   <div class="topbar">
     <button class="iconbtn" data-act="grade">‹</button>
@@ -202,9 +218,19 @@ function viewDetail() {
           <span style="margin-left:auto;font-weight:900;color:${good ? 'var(--good)' : 'var(--bad)'}">${good ? '✓ 答對' : (a ? '✗ 答錯' : '未作答')}</span>
         </div>
       </div>
+      ${Q ? `<div class="dcard">
+        <h3>題目</h3>
+        <div class="dq">${esc(Q.q)}</div>
+        ${optRows(Q.o, false)}
+      </div>
+      <div class="dcard">
+        <h3>中文翻譯</h3>
+        <div class="dq">${esc(Q.zq || '')}</div>
+        ${optRows(Q.zo, true)}
+      </div>` : ''}
       <div class="dcard">
         <h3>看題目原圖</h3>
-        <button class="btn" data-act="readerOpen"><span class="ic">📄</span>開啟圖片（可放大）</button>
+        <button class="btn" data-act="openQ" data-v="${n}"><span class="ic">📄</span>開啟這一頁（可放大）</button>
       </div>
       <div class="dcard">
         <h3>我的詳解筆記</h3>
@@ -629,6 +655,22 @@ document.addEventListener('click', async e => {
     case 'detailPrev': { const l = qlist(S.set), i = l.indexOf(S.detailNo); S.detailNo = l[Math.max(0, i - 1)]; render(); break; }
     case 'detailNext': { const l = qlist(S.set), i = l.indexOf(S.detailNo); S.detailNo = l[Math.min(l.length - 1, i + 1)]; render(); break; }
     case 'readerOpen': S.overlay = 'reader'; render(); break;
+    case 'zh': S.showZh = !S.showZh; render(); break;
+    case 'openQ': {
+      const qn = +v;
+      const idx = S.set.pages.findIndex(p => p.qFrom && p.qTo && qn >= p.qFrom && qn <= p.qTo);
+      S.reader.page = idx < 0 ? 0 : idx;
+      S.reader.s = 1; S.reader.tx = 0; S.reader.ty = 0; S.reader.col = 'full';
+      S.overlay = 'reader'; render(); break;
+    }
+    case 'addBuiltin': {
+      const b = builtinSet();
+      if (!b) return toast('內建題組載入失敗');
+      await dbPut(b);
+      S.sets.unshift({ ...b, pageCount: b.pages.length, pages: [] });
+      S.set = b; S.screen = 'set'; S.q = 0;
+      render(); toast('內建題組已加入'); break;
+    }
     case 'openPage': S.reader.page = +v; S.reader.s = 1; S.reader.tx = 0; S.reader.ty = 0; S.reader.col = 'full'; S.overlay = 'reader'; render(); break;
     case 'closeReader': S.overlay = null; render(); break;
     case 'adjust': S.overlay = 'adjust'; render(); break;

@@ -145,6 +145,34 @@ button { cursor: pointer; border: 0; background: none; }
 }
 .peekth.on { border-color: var(--accent); }
 .peekth img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* 文字題 */
+.qtext { margin-top: 14px; font-size: 20px; line-height: 1.5; font-weight: 700; letter-spacing: .01em; }
+.zhtext { margin-top: 9px; font-size: 15px; font-weight: 500; color: var(--ink2); line-height: 1.65; }
+.chipbtn { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: #fff; font-size: 13px; font-weight: 700; color: var(--ink2); }
+.chipbtn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.optlist { display: grid; gap: 10px; margin-top: 16px; }
+.optrow {
+  display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 14px;
+  border-radius: 13px; background: #fff; border: 1.5px solid var(--line);
+  text-align: left; font-size: 16.5px; line-height: 1.45; font-weight: 600;
+}
+.optrow:active { transform: scale(.99); }
+.optrow .ch { width: 28px; height: 28px; flex: none; border-radius: 8px; background: #f0ece1; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; }
+.optrow .txt { flex: 1; }
+.optrow.on { background: var(--accent-soft); border-color: var(--accent); }
+.optrow.on .ch { background: var(--accent); color: #fff; }
+.qwrap .navrow { margin-top: auto; }
+.dq { font-size: 16.5px; line-height: 1.55; font-weight: 700; margin-bottom: 10px; }
+.dopts { display: grid; gap: 6px; }
+.dopt { display: flex; gap: 9px; align-items: flex-start; font-size: 14.5px; line-height: 1.5; padding: 7px 9px; border-radius: 9px; }
+.dopt .ch { width: 22px; height: 22px; flex: none; border-radius: 6px; background: #f0ece1; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 900; }
+.dopt .txt { flex: 1; }
+.dopt.right { background: var(--accent-soft); }
+.dopt.right .ch { background: var(--accent); color: #fff; }
+.dopt.wrong { background: #fbeceb; }
+.dopt.wrong .ch { background: var(--bad); color: #fff; }
+.dopt .tag { font-size: 11px; font-weight: 800; color: var(--accent); white-space: nowrap; }
 .navrow { display: flex; gap: 10px; margin-top: 0; padding-top: 16px; }
 .navrow .btn { padding: 14px; }
 
@@ -253,6 +281,7 @@ window.addEventListener('error', function (e) {
 <div id="app"></div>
 <div id="toast"></div>
 <script>
+const BANK = {"id": "builtin-test1", "name": "Test 1（內建）", "qFrom": 1, "qTo": 73, "pages": [{"url": "img/p160.jpg", "qFrom": 1, "qTo": 7}, {"url": "img/p161.jpg", "qFrom": 8, "qTo": 17}, {"url": "img/p162.jpg", "qFrom": 18, "qTo": 27}, {"url": "img/p163.jpg", "qFrom": 28, "qTo": 32}, {"url": "img/p164.jpg", "qFrom": 33, "qTo": 36}, {"url": "img/p165.jpg", "qFrom": 37, "qTo": 40}, {"url": "img/p166.jpg", "qFrom": 41, "qTo": 46}, {"url": "img/p167.jpg", "qFrom": 47, "qTo": 49}, {"url": "img/p168.jpg", "qFrom": 50, "qTo": 52}, {"url": "img/p169.jpg", "qFrom": 53, "qTo": 55}, {"url": "img/p170.jpg", "qFrom": 56, "qTo": 58}, {"url": "img/p171.jpg", "qFrom": 59, "qTo": 61}, {"url": "img/p172.jpg", "qFrom": 62, "qTo": 64}, {"url": "img/p173.jpg", "qFrom": 65, "qTo": 67}, {"url": "img/p174.jpg", "qFrom": 68, "qTo": 70}, {"url": "img/p175.jpg", "qFrom": 71, "qTo": 73}], "questions": {"1": {"q": "看照片，選出正確的描述。", "o": ["The woman is talking on the phone.", "The woman is using her cell phone.", "The woman is typing on the laptop.", "The woman is writing in her notebook."], "k": "A", "zq": "照片題", "zo": ["女子正在講電話。", "女子正在使用手機。", "女子正在用筆記型電腦打字。", "女子正在筆記本裡寫字。"]}, "2": {"q": "看照片，選出正確的描述。", "o": ["The woman is cooking some bacon.", "The woman is baking a cake.", "The woman is preparing for dinner.", "The woman is frying some fish."], "k": "A", "zq": "照片題", "zo": ["女子正在烹煮培根。", "女子正在烘焙蛋糕。", "女子正在準備晚餐。", "女子正在煎某種魚。"]}, "3": {"q": "看照片，選出正確的描述。", "o": ["The man is holding some seafood.", "The woman is baking a crab.", "They are scared of the crab.", "The family is shopping for breakfast."], "k": "A", "zq": "照片題", "zo": ["男子正拿著海鮮。", "女子正在烘焙螃蟹。", "他們都害怕這隻螃蟹。", "這家人正在購買早餐。"]}, "4": {"q": "看照片，選出正確的描述。", "o": ["The man is using a screwdriver to screw a nail into the building frame.", "The man is hammering something into a building frame.", "The man is making the frame with his hand.", "The man is wearing protective glasses."], "k": "B", "zq": "照片題", "zo": ["男子正在使用螺絲起子將釘子鎖進建築物的框架。", "男子正在用鐵鎚將某個物件敲進建築物的框架。", "男子正在用手製作框架。", "男子戴著護目鏡。"]}, "5": {"q": "看照片，選出正確的描述。", "o": ["There are some tables and chairs outdoors.", "There are some people sitting at the tables.", "There are plastic umbrellas on the tables.", "There are many flowers in the garden."], "k": "A", "zq": "照片題", "zo": ["戶外有一些桌椅。", "有些人坐在桌子旁。", "桌子上有塑膠傘。", "花園裡有許多花朵。"]}, "6": {"q": "看照片，選出正確的描述。", "o": ["They are looking at each other.", "The woman is typing on her computer.", "The man is using the calculator.", "The man is writing something onto the notepad."], "k": "D", "zq": "照片題", "zo": ["他們正看著彼此。", "女子正在用電腦打字。", "男子正在使用計算機。", "男子正在記事本上寫字。"]}, "7": {"q": "Where was the company picnic held?", "o": ["In April.", "Refreshments will be provided.", "At a park next to a lake."], "k": "C", "zq": "公司的野餐在哪裡舉行？", "zo": ["在四月。", "將會供應茶點。", "在湖邊的公園。"]}, "8": {"q": "Who's working at the front desk today?", "o": ["That's a difficult request.", "It's Katie Miller.", "Make room on your desk."], "k": "B", "zq": "今天誰站櫃檯？", "zo": ["那是個困難的請求。", "是凱蒂．米勒。", "把你的書桌騰出空間。"]}, "9": {"q": "Would you like to work together or separately?", "o": ["Actually, I prefer working alone.", "Let's gather the company's data.", "Before next Friday."], "k": "A", "zq": "你想要一起或個別工作？", "zo": ["其實，我偏好單獨工作。", "我們來匯集電腦資料吧。", "在下個週五前。"]}, "10": {"q": "Have you introduced yourself to the new employee?", "o": ["A new reward system will be introduced soon.", "No, I've been too busy today.", "Nice to meet you."], "k": "B", "zq": "你向新進員工自我介紹了嗎？", "zo": ["很快會推行一個新的獎勵機制。", "還沒有，我今天太忙了。", "很高興見到你。"]}, "11": {"q": "Where does this bus go to?", "o": ["You need a transit card.", "The bus stop is over there.", "It is headed downtown."], "k": "C", "zq": "這班公車開往哪裡？", "zo": ["你需要一張轉乘卡。", "公車站就在那裡。", "它開往市區。"]}, "12": {"q": "The elevator has been repaired, right?", "o": ["She works on the third floor.", "Yes, it is working again.", "That's not what I saw."], "k": "B", "zq": "電梯已經修好了，對吧？", "zo": ["她在三樓上班。", "是的，它又正常運轉了。", "我看到的並非如此。"]}, "13": {"q": "What was the cost of replacing the window?", "o": ["I think it was less than 60 dollars.", "In a department store.", "It wasn't difficult at all."], "k": "A", "zq": "更換窗戶要多少錢？", "zo": ["我想還不到 60 元。", "在百貨公司裡。", "一點都不困難。"]}, "14": {"q": "Will you be checking your email tomorrow?", "o": ["Look at the attachment.", "Actually, I'll be on vacation.", "We accept cash or check."], "k": "B", "zq": "你明天會查看電子郵件嗎？", "zo": ["看附件。", "事實上，我將要去度假。", "我們接受現金或支票。"]}, "15": {"q": "Have you considered building a fence?", "o": ["The house is for sale.", "Yes, we're doing that next.", "His remarks caused offense."], "k": "B", "zq": "你考慮過要圍個籬笆嗎？", "zo": ["房子在出售中。", "是的，我們接下來將會那麼做。", "他的話語冒犯了人。"]}, "16": {"q": "Why did the subway stop running early tonight?", "o": ["Because it's a holiday.", "Let's get off at the next station.", "No, I won't be running tomorrow."], "k": "A", "zq": "地鐵為何今晚提早收班？", "zo": ["因為今天是假日。", "我們在下一站下車吧。", "不，我明天不會去跑步。"]}, "17": {"q": "How was the museum tour?", "o": ["The window faces the street.", "Between Williams Street and Keller Avenue.", "It was very informative."], "k": "C", "zq": "博物館之旅怎麼樣？", "zo": ["這扇窗面向街道。", "在威廉斯街和凱勒大道之間。", "很有教育意義。"]}, "18": {"q": "Why weren't the flyers ready in time for the event?", "o": ["They're not frequent flyers.", "The copier malfunctioned.", "It was the company's 40th anniversary."], "k": "B", "zq": "傳單為何沒及時在這場活動前準備好？", "zo": ["他們不是飛行常客。", "影印機故障了。", "這是公司 40 週年紀念日。"]}, "19": {"q": "Who's speaking at tonight's opening ceremony?", "o": ["Front row seats.", "Mr. Gibson will close the door.", "A famous novelist."], "k": "C", "zq": "誰要在今晚的開幕典禮演講？", "zo": ["前排的座位。", "吉普森先生會關門。", "一位知名的小說家。"]}, "20": {"q": "When should I turn on the air conditioner?", "o": ["When it reaches 25 degrees.", "I agree with you.", "They'll be on in about an hour."], "k": "A", "zq": "我應該什麼時候開空調？", "zo": ["氣溫到達 25 度時。", "我同意你的看法。", "它們大約一小時後會啟動。"]}, "21": {"q": "Which seat is mine?", "o": ["It's a comfortable chair.", "Please sit anywhere.", "Keep that in mind."], "k": "B", "zq": "哪一個座位是我的？", "zo": ["這是一張舒適的椅子。", "請隨意就座。", "請謹記在心。"]}, "22": {"q": "I couldn't get a hold of George.", "o": ["Hold the line, please.", "Some empty boxes.", "Try calling back later."], "k": "C", "zq": "我無法與喬治取得聯繫。", "zo": ["請先別掛電話。", "一些空的盒子。", "試著稍後再打電話。"]}, "23": {"q": "Shouldn't our food have been served by now?", "o": ["It was delicious.", "Yes, the service is rather slow tonight.", "I'll order the tomato pasta."], "k": "B", "zq": "現在不是該上我們的餐點嗎？", "zo": ["相當美味。", "是的，今晚的服務速度很緩慢。", "我要點番茄義大利麵。"]}, "24": {"q": "Why don't we take a group picture?", "o": ["Sure, let's do it on the steps.", "A digital camera.", "Yes, she looks attractive in this picture."], "k": "A", "zq": "我們何不來拍團體照？", "zo": ["好啊，我們在階梯上拍吧。", "一台數位相機。", "是的，照片裡的她看起來很迷人。"]}, "25": {"q": "This new coffee maker was very expensive.", "o": ["He has extensive management experience.", "There's a paper jam in the copy machine.", "That's why the coffee tastes great."], "k": "C", "zq": "這台新的咖啡機非常貴。", "zo": ["他擁有很廣泛的管理經驗。", "影印機卡紙了。", "那就是為什麼這咖啡很好喝。"]}, "26": {"q": "Are you going out for dinner or staying in?", "o": ["I'm going to order delivery.", "Please bring the bill.", "At a convenient time."], "k": "A", "zq": "你要外出吃晚餐還是待在家裡？", "zo": ["我要點外送。", "請將帳單拿過來。", "在方便的時候。"]}, "27": {"q": "Would you like to borrow this book when I finish reading it?", "o": ["Ms. Watson will be leading the team.", "I'm going to book a table for dinner.", "No, I'll get it from the library."], "k": "C", "zq": "等我讀完這本書時，你想要借閱嗎？", "zo": ["華生女士將會帶領這個團隊。", "我將要訂晚餐的桌位。", "不，我要去圖書館借。"]}, "28": {"q": "Didn't you receive a paycheck?", "o": ["No, they are distributed next week.", "Sure, I'll send him an email.", "She wants to get the promotion."], "k": "A", "zq": "你沒有收到薪資支票嗎？", "zo": ["沒有，下星期才會發放。", "當然，我會寄電子郵件給他。", "她想要獲得晉升。"]}, "29": {"q": "You set up chairs in the conference room, didn't you?", "o": ["I need a reference book.", "Yes, 200 seats in total.", "No, I couldn't find the email address."], "k": "B", "zq": "你在會議室裡擺放了椅子，對吧？", "zo": ["我需要一本參考書籍。", "是的，總共 200 個座位。", "不，我找不到那個電子郵件信箱。"]}, "30": {"q": "I was very impressed with Alex's singing.", "o": ["I forgot the singer's name.", "Where is the concert?", "Yes, he has a wonderful voice."], "k": "C", "zq": "我對亞力克斯的歌聲印象深刻。", "zo": ["我忘了歌手的名字。", "音樂會在哪裡？", "是的，他有很棒的嗓音。"]}, "31": {"q": "How about renting a larger space for the party?", "o": ["Is that really necessary?", "I returned the equipment.", "I'm not a tenant."], "k": "A", "zq": "為這派對租個較大的場地如何？", "zo": ["有這個必要嗎？", "我歸還了設備。", "我不是房客。"]}, "32": {"q": "What are the speakers mainly discussing?", "o": ["A training seminar", "The installation of a television", "The date of a presentation", "A software upgrade"], "k": "B", "zq": "對話者主要在討論什麼？", "zo": ["培訓研討會", "安裝電視機", "簡報日期", "軟體更新"]}, "33": {"q": "What is the problem?", "o": ["The necessary tools are unavailable.", "The office is closed.", "The wall is too weak.", "The phone number was wrong."], "k": "A", "zq": "出了什麼問題？", "zo": ["缺少必要的工具", "辦公室關閉了", "牆壁太薄弱", "電話號碼有誤"]}, "34": {"q": "What most likely will the man do first tomorrow?", "o": ["Order a replacement part", "Consult an instruction manual", "Contact the woman", "Fill out a work order"], "k": "C", "zq": "男子明天最有可能先做什麼？", "zo": ["訂購更換的零件", "查詢說明書", "聯繫女子", "填寫工作通知單"]}, "35": {"q": "What position is the man applying for?", "o": ["Lecturer", "Editor", "Journalist", "Superintendent"], "k": "A", "zq": "男子應徵什麼職務？", "zo": ["講師", "編輯", "記者", "主管"]}, "36": {"q": "What makes the man qualified for the position?", "o": ["His academic background", "His work experience", "His popularity", "His eloquence"], "k": "B", "zq": "什麼使男子符合這項職務的條件？", "zo": ["他的學術背景", "他的資歷", "他的名氣", "他的口才"]}, "37": {"q": "What extra benefit does the woman mention?", "o": ["Health insurance", "Flexible hours", "A lot of free time", "Regular incentives"], "k": "C", "zq": "女子提到什麼額外的福利？", "zo": ["健康保險", "彈性工時", "許多的空閒時間", "常態的獎勵"]}, "38": {"q": "What are the speakers mainly discussing?", "o": ["An interior renovation", "A product launch", "A luncheon reservation", "A budget proposal"], "k": "A", "zq": "對話者主要在討論什麼？", "zo": ["室內整修", "產品發表", "午餐訂位", "預算提案"]}, "39": {"q": "What does the man say about the dining room?", "o": ["It needs more lighting.", "It is quite cold.", "It is spacious.", "It is too loud."], "k": "C", "zq": "關於飯廳，男子說了什麼？", "zo": ["它需要更多採光", "它相當寒冷", "它空間寬敞", "它太大聲"]}, "40": {"q": "What does the man suggest the woman do?", "o": ["Repaint the walls a brighter color", "Compensate guests who have reservations", "Draft a budget proposal", "Open a bank account"], "k": "B", "zq": "男子提議女子做什麼？", "zo": ["將牆壁重新油漆成較亮的顏色", "補償已經訂位的客人", "起草預算提案", "開立銀行帳戶"]}, "41": {"q": "What is the man concerned about?", "o": ["Getting his camera fixed", "Receiving sick leave from work", "Preparing for a party", "Introducing a client"], "k": "C", "zq": "男子在擔心什麼事？", "zo": ["修理他的相機", "請病假不去上班", "為派對做準備", "介紹一名客戶"]}, "42": {"q": "According to the man, why does Greg like his new job?", "o": ["It offers better vacation time.", "It pays a higher salary.", "It matches his abilities.", "It provides health benefits."], "k": "C", "zq": "根據男子，葛雷格為何喜歡他的新工作？", "zo": ["它提供較好的休假時間", "它付給較高的薪資", "它符合他的能力", "它提供了健康福利"]}, "43": {"q": "What most likely will the woman do next?", "o": ["Take a group photo", "Attend a Christmas party", "Contact Greg", "Send an email attachment"], "k": "D", "zq": "女子接下來最有可能做什麼？", "zo": ["拍團體照", "參加聖誕派對", "聯繫葛雷格", "寄電子郵件附件"]}, "44": {"q": "What is the man concerned about?", "o": ["Finishing a project on time", "Paying for his new mobile phone", "Repairing a piece of equipment", "Learning a new skill"], "k": "D", "zq": "男子在擔心什麼事？", "zo": ["準時完成專案", "付款買新的行動電話", "修理一件器材設備", "學習新技巧"]}, "45": {"q": "Where do the speakers work?", "o": ["At a repair shop", "At an electronics store", "At a marketing firm", "At a design company"], "k": "D", "zq": "對話者們在哪裡工作？", "zo": ["在維修店", "在電子產品店", "在行銷公司", "在設計公司"]}, "46": {"q": "What does the woman offer to do?", "o": ["Provide assistance", "Pay in cash", "Fill in for the man", "Email a user manual"], "k": "A", "zq": "女子提議要做什麼？", "zo": ["提供協助", "以現金付款", "為男子代班", "用電子郵件寄送使用者手冊"]}, "47": {"q": "Who most likely is the man?", "o": ["A shop owner", "A construction worker", "A local resident", "A market researcher"], "k": "D", "zq": "男子最有可能是什麼人？", "zo": ["商店業主", "建築工人", "當地居民", "市場研究員"]}, "48": {"q": "What does the woman mention about the mall?", "o": ["It was recently renovated.", "It has sufficient parking space.", "It is attracting many tourists.", "It is located outside of town."], "k": "B", "zq": "關於商場，女子提到什麼？", "zo": ["它才剛翻修過", "它有足夠的停車空間", "它吸引了許多遊客", "它座落於城鎮之外"]}, "49": {"q": "Why does the woman usually visit the mall?", "o": ["To purchase groceries", "To meet with her clients", "To buy clothing", "To deliver products"], "k": "C", "zq": "女子為何經常逛商場？", "zo": ["為了購買雜貨", "為了與客戶會面", "為了購買服飾", "為了運送貨品"]}, "50": {"q": "What are the speakers discussing?", "o": ["Orders for office supplies", "Equipment for a conference", "The budget reports", "Their colleague"], "k": "A", "zq": "對話者們在討論什麼？", "zo": ["辦公用品的訂單", "會議使用的設備", "預算報告", "他們的同事"]}, "51": {"q": "Why does the man mention when the supply company closes?", "o": ["To inform her of the business hours", "To let her know she can't order anything", "To explain that the second order would be late", "To imply that new equipment can't be ordered tomorrow"], "k": "C", "zq": "男子為何跟女子提到供貨公司何時關門？", "zo": ["為了告知她營業時間", "為了讓她知道她無法訂購任何東西", "為了解釋第二份訂單將會延遲", "為了暗示新的設備明天無法訂購"]}, "52": {"q": "What does the woman offer to do?", "o": ["Pay for the new order", "Order the supplies herself", "Cancel a meeting", "Speak to their colleague"], "k": "D", "zq": "女子提議她要做什麼事？", "zo": ["為新的訂單付款", "親自訂購用品", "取消會議", "與他們的同事交談"]}, "53": {"q": "What is the problem?", "o": ["The plane tickets were not booked", "A meeting had to be rescheduled", "The meeting was a failure", "A deadline has been changed"], "k": "B", "zq": "出了什麼問題？", "zo": ["未預訂機票", "必須重新安排會議時間", "會議很失敗", "變更最後的期限"]}, "54": {"q": "Which part of the business trip will be postponed?", "o": ["The meeting in New York", "The meeting in Wisconsin", "The meeting in Washington", "The meeting in Westboro"], "k": "C", "zq": "這趟出差的哪個部分將被推遲？", "zo": ["在紐約的會議", "在威斯康辛的會議", "在華盛頓的會議", "在威斯特布路的會議"]}, "55": {"q": "What does the man mean when he says \"that's not a bad idea\"?", "o": ["He thinks it is a bad idea.", "He agrees with the proposed solution.", "He wants to hear other ideas.", "He disagrees with the solution."], "k": "B", "zq": "男子說「那是個不錯的點子」時，指的是什麼意思？", "zo": ["他認為那是個壞點子", "他同意所提出的解決方案", "他想要聽其他的想法", "他不同意解決方案"]}, "56": {"q": "What was the woman doing in Australia?", "o": ["Conducting business", "Studying abroad", "Taking a vacation", "Searching for employees"], "k": "C", "zq": "女子在澳洲做什麼？", "zo": ["出差", "留學", "度假", "找員工"]}, "57": {"q": "What does the woman imply when she says \"is this Robert Wilder's application?\"", "o": ["She is surprised to see the application.", "She will reject the application.", "She doesn't understand something.", "She agrees with the application."], "k": "A", "zq": "女子說「這是羅伯．懷德的應徵函嗎」，她在暗示什麼？", "zo": ["她看到這份應徵函感到很驚訝", "她將會拒絕這項應徵", "她不了解某件事", "她同意這項申請"]}, "58": {"q": "How does the woman know Robert Wilder?", "o": ["They went to college together.", "They work in the same department.", "They play baseball together.", "They play tennis together."], "k": "D", "zq": "女子是如何認識羅伯．懷德的？", "zo": ["他們一起上大學", "他們在相同的部門工作", "他們一起打棒球", "他們一起打網球"]}, "59": {"q": "What is the woman concerned about?", "o": ["Getting extra vacation", "Doing too much work", "Not having time for her children", "Preparing a report"], "k": "C", "zq": "女子在意什麼事？", "zo": ["獲得額外的假期", "做太多的工作", "沒有時間陪孩子", "準備一份報告"]}, "60": {"q": "What does the man suggest?", "o": ["Fire the manager", "Wait until their vacation", "Hire a new employee", "Have some extra vacation days"], "k": "D", "zq": "男子建議什麼？", "zo": ["解聘經理", "等到放假再說", "僱用一名新員工", "多放幾天假"]}, "61": {"q": "What does the woman say she will have to do?", "o": ["Hire a babysitter", "Go to another company", "Ask her husband", "Finish her sales reports"], "k": "A", "zq": "女子說她將必須做什麼？", "zo": ["僱用一名保姆", "去另一家公司", "詢問她的丈夫", "完成她的銷售報告"]}, "62": {"q": "What does the woman have on Friday?", "o": ["A dinner", "A seminar", "A meeting", "An office party"], "k": "C", "zq": "女子在星期五有什麼事？", "zo": ["晚餐", "研討會", "會議", "公司聚會"]}, "63": {"q": "Look at the graphic. How much will the woman pay for the furniture?", "o": ["$165", "$195", "$307", "$614"], "k": "D", "zq": "參看圖表，女子要為家具付多少錢？", "zo": ["165 元", "195 元", "307 元", "614 元"]}, "64": {"q": "What does the man say he will do?", "o": ["Arrange free delivery", "Deliver the furniture in the evening", "Send a confirmation", "Deliver the table himself"], "k": "A", "zq": "男子說他會做什麼？", "zo": ["安排免費運送", "在夜晚運送家具", "寄送確認書", "親自運送桌子"]}, "65": {"q": "Why does the woman call?", "o": ["To get an upgrade", "To book a flight to Korea and Japan", "To cancel her flight to Singapore", "To sign up for a mileage card"], "k": "A", "zq": "女子為何打電話？", "zo": ["為了獲得升等", "為了預訂前往韓國和日本的班機", "為了取消前往新加坡的班機", "為了申請哩程卡"]}, "66": {"q": "Look at the graphic. How many points will the woman use?", "o": ["50,000", "60,000", "70,000", "80,000"], "k": "B", "zq": "參看圖表，女子將會使用多少點數？", "zo": ["50,000", "60,000", "70,000", "80,000"]}, "67": {"q": "What suggestion does the man give the woman?", "o": ["Upgrade her flight to Korea", "Make the request after her trip to Korea and Japan", "Book a different flight", "Cancel her reservation"], "k": "B", "zq": "男子給女子什麼建議？", "zo": ["升等她的韓國班機", "在韓日之旅後提出申請", "訂不同的班機", "取消她的預訂"]}, "68": {"q": "What are the speakers discussing?", "o": ["Their GPS systems", "Which coffee shop to visit", "How far Cambridge is from their apartments", "The fastest route to work"], "k": "D", "zq": "對話者們在討論什麼？", "zo": ["他們的 GPS 系統", "要造訪哪家咖啡店", "康橋街距離他們的公寓有多遠", "上班最快的路線"]}, "69": {"q": "What does the woman want to do?", "o": ["Keep losing the game", "Make more money than the man does", "Get to work faster than the man does", "Participate in a car race"], "k": "C", "zq": "女子想要做什麼？", "zo": ["持續輸掉比賽", "比男子賺更多的錢", "比男子更快到公司", "參加賽車"]}, "70": {"q": "Look at the list. Which shop does the man most likely stop at?", "o": ["Coffee Bean", "Tea Shop", "Java the Cup", "Jake's Diner"], "k": "C", "zq": "參看圖表，男子最有可能去哪一家店？", "zo": ["咖啡豆", "茶店", "爪哇杯", "傑克餐廳"]}, "71": {"q": "Where most likely does the speaker work?", "o": ["At a theater", "At a car dealership", "At a retail store", "At a library"], "k": "C", "zq": "發話者最有可能在哪裡工作？", "zo": ["在戲院", "在汽車經銷商", "在零售店", "在圖書館"]}, "72": {"q": "What is the listener asked to double-check?", "o": ["Accurate pricing", "Sales figures", "Business hours", "Name tags"], "k": "A", "zq": "聽者被要求要再確認什麼？", "zo": ["正確的標價", "銷售數字", "營業時間", "名牌"]}, "73": {"q": "When should the listener contact the speaker?", "o": ["If an employee is late for work", "If a technical problem occurs", "If an item is out of stock", "If a customer is dissatisfied"], "k": "D", "zq": "聽者應該何時聯繫發話者？", "zo": ["若員工遲到時", "若發生了技術性的問題時", "若產品缺貨時", "若顧客不滿意時"]}}};
 /* ==== 20-store.js ==== */
 /* ===== 20-store.js — 資料層 ===== */
 const LETTERS = ['A', 'B', 'C', 'D'];
@@ -307,6 +336,24 @@ async function dbDel(id) {
   });
 }
 
+/* 內建題組（由 build.py 把 bank/*.json 注入成 BANK） */
+function builtinSet() {
+  if (typeof BANK === 'undefined' || !BANK || !BANK.questions) return null;
+  const pages = BANK.pages.map(p => ({ id: uid(), url: p.url, qFrom: p.qFrom, qTo: p.qTo }));
+  const key = {};
+  Object.keys(BANK.questions).forEach(n => {
+    const q = BANK.questions[n];
+    if (q && q.k) key[n] = q.k;
+  });
+  return {
+    id: BANK.id, name: BANK.name, builtin: true,
+    createdAt: Date.now(), updatedAt: Date.now(),
+    qFrom: BANK.qFrom, qTo: BANK.qTo,
+    pages, questions: BANK.questions, key,
+    answers: {}, notes: {}, lastScore: null
+  };
+}
+
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 function qlist(set) {
   const out = [];
@@ -348,6 +395,7 @@ const S = {
   sets: [], set: null, screen: 'home',
   q: 0, filter: 'all', detailNo: null, overlay: null,
   reader: { page: 0, s: 1, tx: 0, ty: 0, col: 'full', bright: 100, contrast: 100 },
+  showZh: false,
   imp: { pages: [], name: '', qFrom: 1, qTo: 30, busy: false, note: '' }
 };
 
@@ -399,7 +447,10 @@ function viewHome() {
     </div>
     ${S.sets.length ? S.sets.map(setCard).join('') : `<div class="empty">還沒有題組。<br><br>按下面「新增題組」，<br>一次選好幾張題目截圖就可以開始。</div>`}
   </div>
-  <div class="fabwrap"><button class="btn primary" data-act="new"><span class="ic">＋</span>新增題組</button></div>`;
+  <div class="fabwrap">
+    ${S.sets.some(s => s.builtin) ? '' : `<button class="btn" data-act="addBuiltin" style="margin-bottom:10px"><span class="ic">📚</span>加入內建 Test 1（73 題）</button>`}
+    <button class="btn primary" data-act="new"><span class="ic">＋</span>新增題組</button>
+  </div>`;
 }
 
 /* ---------- 題組主頁 ---------- */
@@ -442,8 +493,13 @@ function viewQuiz(isKey) {
   const st = S.set, list = qlist(st), total = list.length;
   S.q = Math.max(0, Math.min(total - 1, S.q));
   const n = list[S.q];
-  const cur = (isKey ? st.key : st.answers)[n] || '';
-  const ans = list.filter(x => (isKey ? st.key : st.answers)[x]).length;
+  const src = isKey ? st.key : st.answers;
+  const cur = src[n] || '';
+  const ans = list.filter(x => src[x]).length;
+  const Q = (st.questions || {})[n];
+  const opts = Q && Q.o ? Q.o : null;
+  const letters = opts ? LETTERS.slice(0, opts.length) : LETTERS;
+  const act = isKey ? 'setKey' : 'pick';
   return `
   <div class="topbar">
     <button class="iconbtn" data-act="backSet">✕</button>
@@ -454,15 +510,14 @@ function viewQuiz(isKey) {
   <div class="qwrap">
     <div class="qhead">
       <div class="qno">${n}<small> 題</small></div>
-      <button class="btn" style="width:auto;padding:9px 13px;font-size:13px" data-act="readerOpen"><span class="ic">📄</span>看原圖</button>
+      ${Q && Q.zq ? `<button class="chipbtn ${S.showZh ? 'on' : ''}" data-act="zh">中文</button>` : ''}
+      <button class="btn" style="width:auto;padding:9px 13px;font-size:13px;margin-left:auto" data-act="openQ" data-v="${n}"><span class="ic">📄</span>原圖</button>
     </div>
-    ${st.pages.length ? `<div class="peek">
-      <div class="peek-lbl">題目頁面 · 點一下放大</div>
-      <div class="peekrow">${st.pages.map((p, i) => `<button class="peekth ${i === S.reader.page ? 'on' : ''}" data-act="openPage" data-v="${i}"><img src="${p.url}" alt="第 ${i + 1} 頁"></button>`).join('')}</div>
-    </div>` : ''}
-    <div class="optgrid">
-      ${LETTERS.map(L => `<button class="opt big ${cur === L ? 'on' : ''}" data-act="${isKey ? 'setKey' : 'pick'}" data-v="${L}">${L}</button>`).join('')}
-    </div>
+    ${Q ? `<div class="qtext">${esc(Q.q)}${S.showZh ? `<div class="zhtext">${esc(Q.zq)}</div>` : ''}</div>` : ''}
+    ${opts
+      ? `<div class="optlist">${letters.map((L, i) => `<button class="optrow ${cur === L ? 'on' : ''}" data-act="${act}" data-v="${L}"><span class="ch">${L}</span><span class="txt">${esc(opts[i])}</span></button>`).join('')}</div>`
+      : `<div class="optgrid">${LETTERS.map(L => `<button class="opt big ${cur === L ? 'on' : ''}" data-act="${act}" data-v="${L}">${L}</button>`).join('')}</div>`}
+    ${opts ? '' : `<div class="peek"><div class="peek-lbl">題目頁面 · 點一下放大</div><div class="peekrow">${st.pages.map((p, i) => `<button class="peekth ${i === S.reader.page ? 'on' : ''}" data-act="openPage" data-v="${i}"><img src="${p.url}" alt="第 ${i + 1} 頁"></button>`).join('')}</div></div>`}
     <div class="navrow">
       <button class="btn" data-act="prevQ" ${S.q === 0 ? 'disabled' : ''}>‹ 上一題</button>
       ${S.q >= total - 1
@@ -530,6 +585,14 @@ function viewDetail() {
   const k = st.key[n], a = st.answers[n];
   const good = k && a === k;
   const note = (st.notes && st.notes[n]) || '';
+  const Q = (st.questions || {})[n];
+  const letters = Q && Q.o ? LETTERS.slice(0, Q.o.length) : LETTERS;
+
+  const optRows = (arr, zh) => arr ? `<div class="dopts">${letters.map((L, idx) => {
+    const cls = [L === k ? 'right' : '', L === a && L !== k ? 'wrong' : ''].join(' ');
+    return `<div class="dopt ${cls}${zh ? ' zh' : ''}"><span class="ch">${L}</span><span class="txt">${esc(arr[idx] || '')}</span>${L === k ? '<span class="tag">正解</span>' : ''}</div>`;
+  }).join('')}</div>` : '';
+
   return `
   <div class="topbar">
     <button class="iconbtn" data-act="grade">‹</button>
@@ -546,9 +609,19 @@ function viewDetail() {
           <span style="margin-left:auto;font-weight:900;color:${good ? 'var(--good)' : 'var(--bad)'}">${good ? '✓ 答對' : (a ? '✗ 答錯' : '未作答')}</span>
         </div>
       </div>
+      ${Q ? `<div class="dcard">
+        <h3>題目</h3>
+        <div class="dq">${esc(Q.q)}</div>
+        ${optRows(Q.o, false)}
+      </div>
+      <div class="dcard">
+        <h3>中文翻譯</h3>
+        <div class="dq">${esc(Q.zq || '')}</div>
+        ${optRows(Q.zo, true)}
+      </div>` : ''}
       <div class="dcard">
         <h3>看題目原圖</h3>
-        <button class="btn" data-act="readerOpen"><span class="ic">📄</span>開啟圖片（可放大）</button>
+        <button class="btn" data-act="openQ" data-v="${n}"><span class="ic">📄</span>開啟這一頁（可放大）</button>
       </div>
       <div class="dcard">
         <h3>我的詳解筆記</h3>
@@ -973,6 +1046,22 @@ document.addEventListener('click', async e => {
     case 'detailPrev': { const l = qlist(S.set), i = l.indexOf(S.detailNo); S.detailNo = l[Math.max(0, i - 1)]; render(); break; }
     case 'detailNext': { const l = qlist(S.set), i = l.indexOf(S.detailNo); S.detailNo = l[Math.min(l.length - 1, i + 1)]; render(); break; }
     case 'readerOpen': S.overlay = 'reader'; render(); break;
+    case 'zh': S.showZh = !S.showZh; render(); break;
+    case 'openQ': {
+      const qn = +v;
+      const idx = S.set.pages.findIndex(p => p.qFrom && p.qTo && qn >= p.qFrom && qn <= p.qTo);
+      S.reader.page = idx < 0 ? 0 : idx;
+      S.reader.s = 1; S.reader.tx = 0; S.reader.ty = 0; S.reader.col = 'full';
+      S.overlay = 'reader'; render(); break;
+    }
+    case 'addBuiltin': {
+      const b = builtinSet();
+      if (!b) return toast('內建題組載入失敗');
+      await dbPut(b);
+      S.sets.unshift({ ...b, pageCount: b.pages.length, pages: [] });
+      S.set = b; S.screen = 'set'; S.q = 0;
+      render(); toast('內建題組已加入'); break;
+    }
     case 'openPage': S.reader.page = +v; S.reader.s = 1; S.reader.tx = 0; S.reader.ty = 0; S.reader.col = 'full'; S.overlay = 'reader'; render(); break;
     case 'closeReader': S.overlay = null; render(); break;
     case 'adjust': S.overlay = 'adjust'; render(); break;
@@ -993,6 +1082,16 @@ document.addEventListener('click', async e => {
   } catch (e) {
     S.sets = [];
     setTimeout(() => toast('這個瀏覽器無法離線儲存，重新整理後資料會消失'), 400);
+  }
+  // 第一次打開：把內建題組放進去
+  if (!S.sets.some(s => s.builtin)) {
+    try {
+      const b = builtinSet();
+      if (b) {
+        await dbPut(b);
+        S.sets.unshift({ ...b, pageCount: b.pages.length, pages: [] });
+      }
+    } catch (e) { /* 沒有內建資料就照常開 */ }
   }
   S.screen = 'home';
   render();

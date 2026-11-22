@@ -51,6 +51,24 @@ async function dbDel(id) {
   });
 }
 
+/* 內建題組（由 build.py 把 bank/*.json 注入成 BANK） */
+function builtinSet() {
+  if (typeof BANK === 'undefined' || !BANK || !BANK.questions) return null;
+  const pages = BANK.pages.map(p => ({ id: uid(), url: p.url, qFrom: p.qFrom, qTo: p.qTo }));
+  const key = {};
+  Object.keys(BANK.questions).forEach(n => {
+    const q = BANK.questions[n];
+    if (q && q.k) key[n] = q.k;
+  });
+  return {
+    id: BANK.id, name: BANK.name, builtin: true,
+    createdAt: Date.now(), updatedAt: Date.now(),
+    qFrom: BANK.qFrom, qTo: BANK.qTo,
+    pages, questions: BANK.questions, key,
+    answers: {}, notes: {}, lastScore: null
+  };
+}
+
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 function qlist(set) {
   const out = [];
