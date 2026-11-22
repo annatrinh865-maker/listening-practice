@@ -226,12 +226,39 @@ function check(name, cond, extra) {
     'C:/Users/User/Documents/listening-practice/probe/p1.jpg',
     'C:/Users/User/Documents/listening-practice/probe/p2.jpg'
   );
-  for (let i = 0; i < 40; i++) {
-    const n = await page.$$eval('.thumbs .th', els => els.length).catch(() => 0);
-    if (n === 2) break;
-    await sleep(600);
+  for (let i = 0; i < 30; i++) {
+    if (await page.$('[data-act="cropApply"]')) break;
+    await sleep(400);
+  }
+  check('選照片後進入框選畫面', !!(await page.$('[data-act="cropApply"]')));
+  const handles = await page.$$eval('.cropwrap circle.h', els => els.length);
+  check('四個角點可以拉', handles === 4, 'h=' + handles);
+  await page.screenshot({ path: path.join(SHOTS, '10-crop.png') });
+  await page.click('[data-act="cropApply"]');
+  await sleep(2000);
+  if (await page.$('[data-act="cropApply"]')) {
+    await page.click('[data-act="cropApply"]');
+    await sleep(2000);
+  }
+  check('兩張都完成框選', !!(await page.$('#impName')));
+  for (let i = 0; i < 20; i++) {
+    if ((await page.$$eval('.thumbs .th', els => els.length).catch(() => 0)) === 2) break;
+    await sleep(400);
   }
   check('掃描兩張進來', (await page.$$eval('.thumbs .th', els => els.length)) === 2);
+
+  // 四角偵測的單元檢查：畫一個傾斜四邊形，抓到的角點要在附近
+  const det = await page.evaluate(() => {
+    const c = document.createElement('canvas'); c.width = 600; c.height = 800;
+    const x = c.getContext('2d');
+    x.fillStyle = '#2b2b2b'; x.fillRect(0, 0, 600, 800);
+    x.fillStyle = '#f2efe4';
+    x.beginPath(); x.moveTo(120, 90); x.lineTo(540, 140); x.lineTo(500, 720); x.lineTo(80, 660); x.closePath(); x.fill();
+    return detectCorners(c);
+  });
+  const truth = [[120, 90], [540, 140], [500, 720], [80, 660]];
+  const err = det.reduce((m, p, i) => Math.max(m, Math.hypot(p[0] - truth[i][0], p[1] - truth[i][1])), 0);
+  check('四角偵測誤差 < 60px', err < 60, 'err=' + Math.round(err) + ' pts=' + JSON.stringify(det));
   await page.click('#impName', { clickCount: 3 });
   await page.type('#impName', '講義掃描');
   await page.click('[data-act="create"]');

@@ -269,6 +269,23 @@ textarea.notes {
 .kindbtn .k-ic { display: block; font-size: 20px; margin-bottom: 5px; }
 .kindbtn.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 
+/* ---------- 掃描框選 ---------- */
+.crop { position: fixed; inset: 0; background: #14130f; display: flex; flex-direction: column; z-index: 45; }
+.crop .cbar { display: flex; align-items: center; gap: 8px; padding: calc(var(--safe-t) + 10px) 12px 8px; color: #efe9dc; font-size: 12.5px; }
+.crop .cbar .btn2 { background: rgba(255,255,255,.1); color: #efe9dc; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 700; }
+.cropstage { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 8px; }
+.cropwrap { position: relative; line-height: 0; box-shadow: 0 4px 20px rgba(0,0,0,.5); }
+.cropwrap img { width: 100%; height: 100%; display: block; }
+.cropwrap svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.cropwrap .quad { fill: rgba(70,190,120,.14); stroke: #6fe3a3; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+.cropwrap .h { fill: #6fe3a3; stroke: #10231a; stroke-width: 3; vector-effect: non-scaling-stroke; touch-action: none; cursor: grab; }
+.crop .cfoot { display: flex; align-items: center; gap: 8px; padding: 10px 12px calc(var(--safe-b) + 12px); }
+.crop .cfoot .seg2 { flex: 1; display: flex; gap: 4px; background: rgba(255,255,255,.08); padding: 4px; border-radius: 11px; }
+.crop .cfoot .seg2 button { flex: 1; color: #efe9dc; font-size: 12.5px; font-weight: 700; padding: 8px 4px; border-radius: 8px; }
+.crop .cfoot .seg2 button.on { background: rgba(255,255,255,.9); color: #14130f; }
+.crop .cfoot .btn2 { background: #6fe3a3; color: #10231a; border-radius: 11px; padding: 12px 16px; font-size: 14px; font-weight: 800; }
+.crop .cfoot .btn2.strong { background: #6fe3a3; }
+
 #toast {
   position: fixed; left: 50%; top: calc(var(--safe-t) + 62px); transform: translate(-50%, -10px);
   background: #22201c; color: #fff; font-size: 13.5px; font-weight: 600; padding: 10px 16px;
@@ -825,6 +842,7 @@ function render() {
   else if (S.screen === 'grade') html = viewGrade();
   else if (S.screen === 'detail') html = viewDetail();
   else if (S.screen === 'import') html = viewImport();
+  else if (S.screen === 'crop') html = cropHTML();
   else if (S.screen === 'more') html = viewMore();
   app.innerHTML = html;
   app.dataset.rendered = '1';
@@ -835,6 +853,7 @@ function after() {
   try { afterBind(); } catch (e) { console.error('bind error', e); }
 }
 function afterBind() {
+  if (S.screen === 'crop') { bindCrop(); return; }
   // 閱讀器
   const rimg = document.getElementById('rimg');
   if (rimg) {
@@ -987,16 +1006,32 @@ function bindReaderGestures() {
 async function handleFiles(files, appendToSet, role) {
   const arr = [...(files || [])];
   if (!arr.length) return;
-  const isScan = appendToSet ? S.set && S.set.kind === 'scan' : S.imp.kind === 'scan';
+  const isScan = appendToSet ? (S.set && S.set.kind === 'scan') : S.imp.kind === 'scan';
   const mode = S.imp.mode || 'gray';
+
+  // 掃描：先壓縮，再進框選畫面（四角拉正 → 去陰影）
+  if (isScan) {
+    const queue = [];
+    S.imp.busy = true;
+    for (let i = 0; i < arr.length; i++) {
+      S.imp.note = `讀取 ${i + 1} / ${arr.length}…`;
+      if (!appendToSet) render();
+      try { queue.push(await compressFile(arr[i])); } catch (e) { /* 壞圖跳過 */ }
+    }
+    S.imp.busy = false;
+    S.imp.note = '';
+    if (!queue.length) { render(); return; }
+    CROP = null;
+    await openCrop(queue, appendToSet ? 'set' : 'import');
+    return;
+  }
 
   if (appendToSet) {
     S.imp.busy = true;
     for (let i = 0; i < arr.length; i++) {
       try {
         const p = await compressFile(arr[i]);
-        if (isScan) p.url = await enhanceDataUrl(p.url, mode);
-        p.role = isScan ? 'scan' : (role || 'book');
+        p.role = role || 'book';
         S.set.pages.push(p);
       } catch (e) { toast('有圖片讀不進來'); }
     }
@@ -1013,7 +1048,6 @@ async function handleFiles(files, appendToSet, role) {
     render();
     try {
       const p = await compressFile(arr[i]);
-      if (isScan) p.url = await enhanceDataUrl(p.url, mode);
       S.imp.pages.push(p);
     } catch (e) { /* 跳過壞圖 */ }
   }
@@ -1039,6 +1073,15 @@ document.addEventListener('click', async e => {
     }
     case 'kind': { S.imp.kind = v; render(); break; }
     case 'scanmode': { S.imp.mode = v; render(); break; }
+    case 'cropAuto': {
+      if (!CROP) break;
+      const im = await loadImage(CROP.queue[CROP.idx].url);
+      CROP.corners = detectCorners(canvasOf(im));
+      render(); break;
+    }
+    case 'cropFilter': { if (CROP) CROP.filter = v; render(); break; }
+    case 'cropApply': await cropApply(); break;
+    case 'cropCancel': finishCrop(); break;
     case 'pickfiles': { const f = document.getElementById('fileIn'); if (f) f.click(); break; }
     case 'addPage': { const f = document.getElementById('fileIn2'); if (f) f.click(); break; }
     case 'addRolePage': {
@@ -1169,13 +1212,332 @@ document.addEventListener('click', async e => {
 
 
 
-/* ==== 50-scan.js ==== */
-/* ===== 50-scan.js — 掃描增強（去陰影＋白底） / 匯出 PDF ===== */
+/* ==== 45-crop.js ==== */
+/* ===== 45-crop.js — 掃描框選（四角可拖） ===== */
+let CROP = null;
 
-/* 用積分圖做局部均值／標準差：
-   gray 模式＝把每個像素除以它周圍的背景亮度（去掉陰影、紙底拉成純白）
-   bw   模式＝Sauvola 二值化（局部門檻，暗處不會糊成一團黑） */
+async function openCrop(queue, target) {
+  CROP = { queue, idx: 0, target, filter: (S.imp.mode === 'bw' ? 'bw' : 'gray'), imgW: 0, imgH: 0, corners: null, busy: false };
+  await loadCropStep();
+}
+
+async function loadCropStep() {
+  const p = CROP.queue[CROP.idx];
+  const im = await loadImage(p.url);
+  CROP.imgW = im.naturalWidth;
+  CROP.imgH = im.naturalHeight;
+  CROP.corners = detectCorners(canvasOf(im));
+  S.screen = 'crop';
+  render();
+}
+
+function cropPolyPoints() {
+  return CROP.corners.map(p => `${p[0]},${p[1]}`).join(' ');
+}
+
+function cropHTML() {
+  const c = CROP;
+  if (!c || !c.imgW) return `<div class="crop"><div class="cbar">處理中…</div></div>`;
+  const r = Math.max(16, Math.round(c.imgW / 34));
+  return `<div class="crop">
+    <div class="cbar">
+      <button class="btn2" data-act="cropCancel">✕ 取消</button>
+      <div style="flex:1;text-align:center">第 ${c.idx + 1} / ${c.queue.length} 張 · 拉四個角對齊紙張</div>
+      <button class="btn2" data-act="cropAuto">自動</button>
+    </div>
+    <div class="cropstage" id="cstage">
+      <div class="cropwrap" id="cwrap">
+        <img id="cimg" src="${c.queue[c.idx].url}" alt="">
+        <svg id="csvg" viewBox="0 0 ${c.imgW} ${c.imgH}" preserveAspectRatio="none">
+          <polygon class="quad" points="${cropPolyPoints()}"></polygon>
+          ${c.corners.map((pt, i) => `<circle class="h" data-i="${i}" cx="${pt[0]}" cy="${pt[1]}" r="${r}"></circle>`).join('')}
+        </svg>
+      </div>
+    </div>
+    <div class="cfoot">
+      <div class="seg2">
+        <button data-act="cropFilter" data-v="color" class="${c.filter === 'color' ? 'on' : ''}">彩色</button>
+        <button data-act="cropFilter" data-v="gray" class="${c.filter === 'gray' ? 'on' : ''}">灰階</button>
+        <button data-act="cropFilter" data-v="bw" class="${c.filter === 'bw' ? 'on' : ''}">黑白</button>
+      </div>
+      <button class="btn2 strong" data-act="cropApply">${c.idx + 1 === c.queue.length ? '完成' : '下一張 ›'}</button>
+    </div>
+  </div>`;
+}
+
+/* 尺寸：把圖縮到放得進畫面，回報 scale */
+function sizeCrop() {
+  const stage = document.getElementById('cstage');
+  const wrap = document.getElementById('cwrap');
+  if (!stage || !wrap || !CROP) return;
+  const pad = 8;
+  const sw = stage.clientWidth - pad * 2;
+  const sh = stage.clientHeight - pad * 2;
+  const k = Math.min(sw / CROP.imgW, sh / CROP.imgH);
+  wrap.style.width = Math.round(CROP.imgW * k) + 'px';
+  wrap.style.height = Math.round(CROP.imgH * k) + 'px';
+}
+
+function bindCrop() {
+  if (!CROP) return;
+  sizeCrop();
+  window.onresize = () => { if (S.screen === 'crop') sizeCrop(); };
+  const svg = document.getElementById('csvg');
+  const poly = svg && svg.querySelector('.quad');
+  if (!svg) return;
+  let dragIdx = -1;
+
+  const toImg = e => {
+    const r = svg.getBoundingClientRect();
+    return [
+      (e.clientX - r.left) / r.width * CROP.imgW,
+      (e.clientY - r.top) / r.height * CROP.imgH
+    ];
+  };
+  svg.querySelectorAll('circle.h').forEach(cir => {
+    cir.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      dragIdx = +cir.dataset.i;
+      cir.setPointerCapture(e.pointerId);
+    });
+    cir.addEventListener('pointermove', e => {
+      if (dragIdx !== +cir.dataset.i) return;
+      const [x, y] = toImg(e);
+      const cx = Math.max(0, Math.min(CROP.imgW, x));
+      const cy = Math.max(0, Math.min(CROP.imgH, y));
+      CROP.corners[+cir.dataset.i] = [Math.round(cx), Math.round(cy)];
+      cir.setAttribute('cx', cx);
+      cir.setAttribute('cy', cy);
+      if (poly) poly.setAttribute('points', cropPolyPoints());
+    });
+    cir.addEventListener('pointerup', e => { dragIdx = -1; });
+    cir.addEventListener('pointercancel', () => { dragIdx = -1; });
+  });
+}
+
+async function cropApply() {
+  if (!CROP || CROP.busy) return;
+  CROP.busy = true;
+  toast('處理中…');
+  try {
+    const p = CROP.queue[CROP.idx];
+    const out = await scanPage(p.url, CROP.corners, CROP.filter);
+    const page = { id: uid(), url: out.url, w: out.w, h: out.h, role: 'scan' };
+    if (CROP.target === 'set' && S.set) { S.set.pages.push(page); save(); }
+    else S.imp.pages.push(page);
+  } catch (e) {
+    toast('這張處理失敗');
+  }
+  CROP.busy = false;
+  CROP.idx++;
+  if (CROP.idx >= CROP.queue.length) finishCrop();
+  else await loadCropStep();
+}
+
+function finishCrop() {
+  const target = CROP ? CROP.target : 'import';
+  CROP = null;
+  window.onresize = null;
+  if (target === 'set') { S.screen = 'set'; render(); }
+  else { S.screen = 'import'; render(); }
+}
+
+/* ==== 50-scan.js ==== */
+/* ===== 50-scan.js — 掃描：找頁面四角 → 透視拉正 → 去陰影/白底 ===== */
+
+function canvasOf(img) {
+  const cv = document.createElement('canvas');
+  cv.width = img.naturalWidth || img.width;
+  cv.height = img.naturalHeight || img.height;
+  cv.getContext('2d').drawImage(img, 0, 0);
+  return cv;
+}
+function loadImage(url) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => rej(new Error('圖片讀不進來'));
+    im.src = url;
+  });
+}
+
+/* ---- 1. 找文件四角（Otsu → 最大亮區 → 極值四點） ---- */
+function detectCorners(cv) {
+  const W = cv.width, H = cv.height;
+  const SW = 260;
+  const SH = Math.max(1, Math.round(H * SW / W));
+  const sc = document.createElement('canvas');
+  sc.width = SW; sc.height = SH;
+  const sx = sc.getContext('2d');
+  sx.drawImage(cv, 0, 0, SW, SH);
+  const d = sx.getImageData(0, 0, SW, SH).data;
+
+  const N = SW * SH;
+  const g = new Uint8Array(N);
+  const hist = new Array(256).fill(0);
+  for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+    const v = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) | 0;
+    g[p] = v; hist[v]++;
+  }
+  // Otsu
+  let sum = 0;
+  for (let v = 0; v < 256; v++) sum += v * hist[v];
+  let sumB = 0, wB = 0, best = -1, thr = 128;
+  for (let v = 0; v < 256; v++) {
+    wB += hist[v];
+    if (!wB) continue;
+    const wF = N - wB;
+    if (!wF) break;
+    sumB += v * hist[v];
+    const mB = sumB / wB, mF = (sum - sumB) / wF;
+    const between = wB * wF * (mB - mF) * (mB - mF);
+    if (between > best) { best = between; thr = v; }
+  }
+
+  // 最大連通亮區
+  const seen = new Uint8Array(N);
+  const stack = new Int32Array(N);
+  let bestPixels = null, bestCount = 0;
+  for (let start = 0; start < N; start++) {
+    if (seen[start] || g[start] <= thr) continue;
+    let top = 0, count = 0;
+    const list = [];
+    stack[top++] = start; seen[start] = 1;
+    while (top) {
+      const cur = stack[--top];
+      list.push(cur); count++;
+      const x = cur % SW, y = (cur / SW) | 0;
+      if (x > 0 && !seen[cur - 1] && g[cur - 1] > thr) { seen[cur - 1] = 1; stack[top++] = cur - 1; }
+      if (x < SW - 1 && !seen[cur + 1] && g[cur + 1] > thr) { seen[cur + 1] = 1; stack[top++] = cur + 1; }
+      if (y > 0 && !seen[cur - SW] && g[cur - SW] > thr) { seen[cur - SW] = 1; stack[top++] = cur - SW; }
+      if (y < SH - 1 && !seen[cur + SW] && g[cur + SW] > thr) { seen[cur + SW] = 1; stack[top++] = cur + SW; }
+    }
+    if (count > bestCount) { bestCount = count; bestPixels = list; }
+  }
+
+  const fallback = [[0, 0], [W, 0], [W, H], [0, H]];
+  if (!bestPixels || bestCount < N * 0.18) return fallback;
+
+  let minS = 1e9, maxS = -1e9, minD = 1e9, maxD = -1e9;
+  // 用「最極端的一小群點的平均」當角點，避免單一雜點把角拉歪
+  const k = Math.max(6, Math.floor(bestPixels.length * 0.004));
+  const pick = (metric, dir) => {
+    const arr = [];
+    for (let i = 0; i < bestPixels.length; i++) {
+      const idx = bestPixels[i];
+      const x = idx % SW, y = (idx / SW) | 0;
+      const v = dir * metric(x, y);
+      if (arr.length < k) { arr.push([v, x, y]); if (arr.length === k) arr.sort((a, b) => a[0] - b[0]); }
+      else if (v < arr[k - 1][0]) { arr[k - 1] = [v, x, y]; arr.sort((a, b) => a[0] - b[0]); }
+    }
+    if (!arr.length) return null;
+    let sx = 0, sy = 0;
+    for (const p of arr) { sx += p[1]; sy += p[2]; }
+    return [sx / arr.length, sy / arr.length];
+  };
+  const TL = pick((x, y) => x + y, 1);
+  const BR = pick((x, y) => x + y, -1);
+  const TR = pick((x, y) => x - y, -1);
+  const BL = pick((x, y) => x - y, 1);
+  if (!TL || !TR || !BR || !BL) return fallback;
+  const kx = W / SW, ky = H / SH;
+  const pts = [TL, TR, BR, BL].map(p => [Math.round(p[0] * kx), Math.round(p[1] * ky)]);
+  // 面積太小 → 用整張
+  const area = Math.abs(
+    (pts[0][0] * pts[1][1] - pts[1][0] * pts[0][1]) + (pts[1][0] * pts[2][1] - pts[2][0] * pts[1][1]) +
+    (pts[2][0] * pts[3][1] - pts[3][0] * pts[2][1]) + (pts[3][0] * pts[0][1] - pts[0][0] * pts[3][1])
+  ) / 2;
+  if (area < W * H * 0.2) return fallback;
+  // 往外放 1.5%：自動偵測容易往內縮，寧可多留一點白邊也不要切到字
+  const cx0 = (pts[0][0] + pts[1][0] + pts[2][0] + pts[3][0]) / 4;
+  const cy0 = (pts[0][1] + pts[1][1] + pts[2][1] + pts[3][1]) / 4;
+  const grow = 1.015;
+  return pts.map(p => [
+    Math.max(0, Math.min(W, Math.round(cx0 + (p[0] - cx0) * grow))),
+    Math.max(0, Math.min(H, Math.round(cy0 + (p[1] - cy0) * grow)))
+  ]);
+}
+
+/* ---- 2. 透視校正（四邊形 → 矩形） ---- */
+function solve8(A, b) {
+  const n = 8;
+  for (let i = 0; i < n; i++) {
+    let piv = i;
+    for (let r = i + 1; r < n; r++) if (Math.abs(A[r][i]) > Math.abs(A[piv][i])) piv = r;
+    if (Math.abs(A[piv][i]) < 1e-9) return null;
+    if (piv !== i) { const t = A[i]; A[i] = A[piv]; A[piv] = t; const tb = b[i]; b[i] = b[piv]; b[piv] = tb; }
+    for (let r = 0; r < n; r++) {
+      if (r === i) continue;
+      const f = A[r][i] / A[i][i];
+      if (!f) continue;
+      for (let c = i; c < n; c++) A[r][c] -= f * A[i][c];
+      b[r] -= f * b[i];
+    }
+  }
+  const x = new Array(n);
+  for (let i = 0; i < n; i++) x[i] = b[i] / A[i][i];
+  return x;
+}
+
+function warpPerspective(srcCv, corners, maxSide) {
+  const [p0, p1, p2, p3] = corners;
+  const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  let outW = Math.round(Math.max(dist(p0, p1), dist(p3, p2)));
+  let outH = Math.round(Math.max(dist(p0, p3), dist(p1, p2)));
+  const cap = maxSide || 2200;
+  const k = Math.min(1, cap / Math.max(outW, outH));
+  outW = Math.max(80, Math.round(outW * k));
+  outH = Math.max(80, Math.round(outH * k));
+
+  const dst = [[0, 0], [outW, 0], [outW, outH], [0, outH]];
+  const A = [], b = [];
+  for (let i = 0; i < 4; i++) {
+    const [u, v] = dst[i], [x, y] = [p0, p1, p2, p3][i];
+    A.push([u, v, 1, 0, 0, 0, -u * x, -v * x]); b.push(x);
+    A.push([0, 0, 0, u, v, 1, -u * y, -v * y]); b.push(y);
+  }
+  const h = solve8(A, b);
+  const out = document.createElement('canvas');
+  out.width = outW; out.height = outH;
+  const ox = out.getContext('2d');
+  if (!h) { ox.drawImage(srcCv, 0, 0, outW, outH); return out; }
+
+  const sctx = srcCv.getContext('2d');
+  const sd = sctx.getImageData(0, 0, srcCv.width, srcCv.height).data;
+  const SW = srcCv.width, SH = srcCv.height;
+  const dstImg = ox.createImageData(outW, outH);
+  const od = dstImg.data;
+
+  for (let v = 0; v < outH; v++) {
+    const rowBase = v * outW * 4;
+    for (let u = 0; u < outW; u++) {
+      const den = h[6] * u + h[7] * v + 1;
+      const sxf = (h[0] * u + h[1] * v + h[2]) / den;
+      const syf = (h[3] * u + h[4] * v + h[5]) / den;
+      const di = rowBase + u * 4;
+      if (sxf < 0 || syf < 0 || sxf >= SW - 1 || syf >= SH - 1) {
+        od[di] = od[di + 1] = od[di + 2] = 255; od[di + 3] = 255;
+        continue;
+      }
+      const x0 = sxf | 0, y0 = syf | 0;
+      const fx = sxf - x0, fy = syf - y0;
+      const i00 = (y0 * SW + x0) * 4, i10 = i00 + 4;
+      const i01 = i00 + SW * 4, i11 = i01 + 4;
+      for (let c = 0; c < 3; c++) {
+        od[di + c] =
+          sd[i00 + c] * (1 - fx) * (1 - fy) + sd[i10 + c] * fx * (1 - fy) +
+          sd[i01 + c] * (1 - fx) * fy + sd[i11 + c] * fx * fy;
+      }
+      od[di + 3] = 255;
+    }
+  }
+  ox.putImageData(dstImg, 0, 0);
+  return out;
+}
+
+/* ---- 3. 去陰影 / 白底 / 二值化 ---- */
 function enhanceCanvas(cv, mode) {
+  if (!mode || mode === 'color') return cv;
   const cx = cv.getContext('2d');
   const W = cv.width, H = cv.height;
   const img = cx.getImageData(0, 0, W, H);
@@ -1200,10 +1562,9 @@ function enhanceCanvas(cv, mode) {
       S2[rowBase + x + 1] = S2[prevBase + x + 1] + rq;
     }
   }
-  const rect = (S, x0, y0, x1, y1) =>
-    S[y1 * W1 + x1] - S[y0 * W1 + x1] - S[y1 * W1 + x0] + S[y0 * W1 + x0];
+  const rect = (S, x0, y0, x1, y1) => S[y1 * W1 + x1] - S[y0 * W1 + x1] - S[y1 * W1 + x0] + S[y0 * W1 + x0];
 
-  const r = Math.max(10, Math.round(W / 26));
+  const r = Math.max(10, Math.round(W / 24));
   const k = 0.2, R = 128;
   const out = new Uint8ClampedArray(n);
 
@@ -1216,18 +1577,18 @@ function enhanceCanvas(cv, mode) {
       const cnt = (x1 - x0) * (y1 - y0);
       const mean = rect(S1, x0, y0, x1, y1) / cnt;
       const v = L[y * W + x];
-      let g;
+      let gv;
       if (mode === 'bw') {
         const sq = rect(S2, x0, y0, x1, y1);
         const std = Math.sqrt(Math.max(0, sq / cnt - mean * mean));
         const T = mean * (1 + k * (std / R - 1));
-        g = v > T ? 255 : 0;
+        gv = v > T ? 255 : 0;
       } else {
-        g = mean > 4 ? (v / mean) * 244 : v;   // 除以局部背景 → 去陰影
-        if (g > 226) g = 255;                  // 紙底純白
-        if (g < 3) g = 0;
+        gv = mean > 4 ? (v / mean) * 244 : v;
+        if (gv > 226) gv = 255;
+        if (gv < 3) gv = 0;
       }
-      out[y * W + x] = g;
+      out[y * W + x] = gv;
     }
   }
 
@@ -1239,25 +1600,16 @@ function enhanceCanvas(cv, mode) {
   return cv;
 }
 
-/* 用 dataURL 產生掃描版 dataURL */
-function enhanceDataUrl(url, mode) {
-  return new Promise((res, rej) => {
-    const im = new Image();
-    im.onload = () => {
-      try {
-        const cv = document.createElement('canvas');
-        cv.width = im.naturalWidth; cv.height = im.naturalHeight;
-        cv.getContext('2d').drawImage(im, 0, 0);
-        enhanceCanvas(cv, mode);
-        res(cv.toDataURL('image/jpeg', 0.82));
-      } catch (e) { rej(e); }
-    };
-    im.onerror = () => rej(new Error('圖片讀不進來'));
-    im.src = url;
-  });
+/* 一步完成：拉正 + 增強，回傳 dataURL */
+async function scanPage(url, corners, mode) {
+  const im = await loadImage(url);
+  const src = canvasOf(im);
+  const warped = warpPerspective(src, corners || detectCorners(src), 2200);
+  enhanceCanvas(warped, mode);
+  return { url: warped.toDataURL('image/jpeg', 0.85), w: warped.width, h: warped.height };
 }
 
-/* 用瀏覽器內建的列印功能存成 PDF（手機：分享 → 列印 → 存成 PDF） */
+/* ---- 4. 匯出 PDF（用瀏覽器列印 → 存成 PDF） ---- */
 function exportPDF(set) {
   const w = window.open('', '_blank');
   if (!w) return toast('請允許彈出視窗才能匯出');

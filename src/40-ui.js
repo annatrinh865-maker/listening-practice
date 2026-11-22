@@ -424,6 +424,7 @@ function render() {
   else if (S.screen === 'grade') html = viewGrade();
   else if (S.screen === 'detail') html = viewDetail();
   else if (S.screen === 'import') html = viewImport();
+  else if (S.screen === 'crop') html = cropHTML();
   else if (S.screen === 'more') html = viewMore();
   app.innerHTML = html;
   app.dataset.rendered = '1';
@@ -434,6 +435,7 @@ function after() {
   try { afterBind(); } catch (e) { console.error('bind error', e); }
 }
 function afterBind() {
+  if (S.screen === 'crop') { bindCrop(); return; }
   // 閱讀器
   const rimg = document.getElementById('rimg');
   if (rimg) {
@@ -586,16 +588,32 @@ function bindReaderGestures() {
 async function handleFiles(files, appendToSet, role) {
   const arr = [...(files || [])];
   if (!arr.length) return;
-  const isScan = appendToSet ? S.set && S.set.kind === 'scan' : S.imp.kind === 'scan';
+  const isScan = appendToSet ? (S.set && S.set.kind === 'scan') : S.imp.kind === 'scan';
   const mode = S.imp.mode || 'gray';
+
+  // 掃描：先壓縮，再進框選畫面（四角拉正 → 去陰影）
+  if (isScan) {
+    const queue = [];
+    S.imp.busy = true;
+    for (let i = 0; i < arr.length; i++) {
+      S.imp.note = `讀取 ${i + 1} / ${arr.length}…`;
+      if (!appendToSet) render();
+      try { queue.push(await compressFile(arr[i])); } catch (e) { /* 壞圖跳過 */ }
+    }
+    S.imp.busy = false;
+    S.imp.note = '';
+    if (!queue.length) { render(); return; }
+    CROP = null;
+    await openCrop(queue, appendToSet ? 'set' : 'import');
+    return;
+  }
 
   if (appendToSet) {
     S.imp.busy = true;
     for (let i = 0; i < arr.length; i++) {
       try {
         const p = await compressFile(arr[i]);
-        if (isScan) p.url = await enhanceDataUrl(p.url, mode);
-        p.role = isScan ? 'scan' : (role || 'book');
+        p.role = role || 'book';
         S.set.pages.push(p);
       } catch (e) { toast('有圖片讀不進來'); }
     }
@@ -612,7 +630,6 @@ async function handleFiles(files, appendToSet, role) {
     render();
     try {
       const p = await compressFile(arr[i]);
-      if (isScan) p.url = await enhanceDataUrl(p.url, mode);
       S.imp.pages.push(p);
     } catch (e) { /* 跳過壞圖 */ }
   }
@@ -638,6 +655,15 @@ document.addEventListener('click', async e => {
     }
     case 'kind': { S.imp.kind = v; render(); break; }
     case 'scanmode': { S.imp.mode = v; render(); break; }
+    case 'cropAuto': {
+      if (!CROP) break;
+      const im = await loadImage(CROP.queue[CROP.idx].url);
+      CROP.corners = detectCorners(canvasOf(im));
+      render(); break;
+    }
+    case 'cropFilter': { if (CROP) CROP.filter = v; render(); break; }
+    case 'cropApply': await cropApply(); break;
+    case 'cropCancel': finishCrop(); break;
     case 'pickfiles': { const f = document.getElementById('fileIn'); if (f) f.click(); break; }
     case 'addPage': { const f = document.getElementById('fileIn2'); if (f) f.click(); break; }
     case 'addRolePage': {
