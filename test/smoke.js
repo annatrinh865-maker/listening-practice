@@ -194,10 +194,69 @@ function check(name, cond, extra) {
   const pct2 = await page.$eval('.score .big', el => el.textContent);
   check('圖片題組 10/12 = 83%', pct2.startsWith('83'), 'pct=' + pct2);
 
+  // ---- 掃描閱讀 ----
+  await page.click('[data-act="backSet"]');
+  await sleep(300);
+  await page.click('[data-act="home"]');
+  await sleep(400);
+  await page.click('[data-act="new"]');
+  await sleep(300);
+  await page.click('[data-act="kind"][data-v="scan"]');
+  await sleep(300);
+  check('掃描模式有灰階／黑白可選', !!(await page.$('[data-act="scanmode"][data-v="bw"]')) && !(await page.$('#impFrom')));
+  await page.screenshot({ path: path.join(SHOTS, '09-scan-import.png') });
+
+  // 掃描增強的單元檢查：灰底要變白、黑字要變黑
+  const enh = await page.evaluate(() => {
+    const c = document.createElement('canvas');
+    c.width = 20; c.height = 20;
+    const x = c.getContext('2d');
+    x.fillStyle = '#d9d3c4'; x.fillRect(0, 0, 20, 20);
+    x.fillStyle = '#333333'; x.fillRect(5, 5, 10, 10);
+    enhanceCanvas(c, 'bw');
+    const d = x.getImageData(0, 0, 20, 20).data;
+    let dark = 0, light = 0;
+    for (let i = 0; i < d.length; i += 4) { if (d[i] < 10) dark++; else if (d[i] > 245) light++; }
+    return { dark, light };
+  });
+  check('黑白模式把灰底洗白、字變黑', enh.light > 200 && enh.dark > 90, JSON.stringify(enh));
+
+  const input2 = await page.$('#fileIn');
+  await input2.uploadFile(
+    'C:/Users/User/Documents/listening-practice/probe/p1.jpg',
+    'C:/Users/User/Documents/listening-practice/probe/p2.jpg'
+  );
+  for (let i = 0; i < 40; i++) {
+    const n = await page.$$eval('.thumbs .th', els => els.length).catch(() => 0);
+    if (n === 2) break;
+    await sleep(600);
+  }
+  check('掃描兩張進來', (await page.$$eval('.thumbs .th', els => els.length)) === 2);
+  await page.click('#impName', { clickCount: 3 });
+  await page.type('#impName', '講義掃描');
+  await page.click('[data-act="create"]');
+  await sleep(900);
+  if (await page.$('[data-act="closeReader"]')) {
+    await page.click('[data-act="closeReader"]');
+    await sleep(400);
+  }
+  const hasPdf = !!(await page.$('[data-act="pdf"]'));
+  check('掃描文件有「匯出 PDF」', hasPdf);
+  await page.screenshot({ path: path.join(SHOTS, '10-scan-set.png') });
+  await page.click('[data-act="readerOpen"]');
+  await sleep(500);
+  check('掃描檔可直接閱讀', !!(await page.$('#rimg')));
+  await page.click('[data-act="closeReader"]');
+  await sleep(300);
+  await page.click('[data-act="home"]');
+  await sleep(500);
+  const scanCard = await page.$$eval('.setcard .nm', els => els.map(e => e.textContent.trim()).join(' / '));
+  check('首頁出現掃描文件卡片', /掃描文件/.test(scanCard), scanCard.slice(0, 60));
+
   await page.reload({ waitUntil: 'load' });
   await sleep(900);
   const cards = await page.$$eval('.setcard', els => els.length);
-  check('重整後兩個題組都在', cards === 2, 'cards=' + cards);
+  check('重整後三個題組都在', cards === 3, 'cards=' + cards);
   await page.screenshot({ path: path.join(SHOTS, '09-home-after.png') });
 
   await page.setViewport({ width: 360, height: 640, deviceScaleFactor: 2, isMobile: true, hasTouch: true });

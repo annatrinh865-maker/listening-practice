@@ -5,7 +5,7 @@ const S = {
   q: 0, filter: 'all', detailNo: null, overlay: null,
   reader: { page: 0, s: 1, tx: 0, ty: 0, col: 'full', bright: 100, contrast: 100 },
   showZh: false, showStem: false,
-  imp: { pages: [], name: '', qFrom: 1, qTo: 30, busy: false, note: '' }
+  imp: { pages: [], name: '', qFrom: 1, qTo: 30, busy: false, note: '', kind: 'book', mode: 'gray' }
 };
 
 function toast(msg) {
@@ -31,6 +31,14 @@ function save() {
 
 /* ---------- 首頁 ---------- */
 function setCard(s) {
+  const isScan = s.kind === 'scan';
+  const pages = (s.pages && s.pages.length) || s.pageCount || 0;
+  if (isScan) {
+    return `<button class="setcard" data-act="open" data-id="${s.id}">
+      <div class="nm">${esc(s.name)} <span class="pill grey">掃描文件</span></div>
+      <div class="meta"><span>${pages} 頁</span><span>可以放大讀、可匯出 PDF</span></div>
+    </button>`;
+  }
   const list = qlist(s), total = list.length;
   const ans = list.filter(n => s.answers[n]).length;
   const keyed = list.filter(n => s.key[n]).length;
@@ -42,7 +50,7 @@ function setCard(s) {
   const done = ans === total;
   return `<button class="setcard" data-act="open" data-id="${s.id}">
     <div class="nm">${esc(s.name)} ${done ? '<span class="pill good">已作答</span>' : (ans ? `<span class="pill warn">作答中 ${ans}/${total}</span>` : '')}</div>
-    <div class="meta"><span>第 ${s.qFrom}–${s.qTo} 題</span><span>${(s.pages && s.pages.length) || s.pageCount || 0} 張圖</span><span>正解 ${keyed}/${total}</span>${pill}</div>
+    <div class="meta"><span>第 ${s.qFrom}–${s.qTo} 題</span><span>${pages} 張圖</span><span>正解 ${keyed}/${total}</span>${pill}</div>
     <div class="bar"><i style="width:${pct}%"></i></div>
   </button>`;
 }
@@ -69,6 +77,27 @@ function viewSet() {
   const keyed = list.filter(n => st.key[n]).length;
   const ls = st.lastScore;
   const canGrade = keyed > 0 && ans > 0;
+  if (st.kind === 'scan') {
+    return `
+  <div class="topbar">
+    <button class="iconbtn" data-act="home">‹</button>
+    <h1>${esc(st.name)}</h1>
+    <button class="iconbtn" data-act="more">⋯</button>
+  </div>
+  <div class="scroll">
+    <div class="hubhead">
+      <div class="stats" style="grid-template-columns:1fr 1fr">
+        <div class="stat"><b>${st.pages.length}</b><span>頁數</span></div>
+        <div class="stat"><b>掃描</b><span>已增強對比</span></div>
+      </div>
+    </div>
+    <div class="menu">
+      <button class="btn primary" data-act="readerOpen"><span class="ic">📖</span><span class="lbl">閱讀<small>放大、左半／右半、調亮度</small></span><span class="chev">›</span></button>
+      <button class="btn" data-act="pdf"><span class="ic">🖨</span><span class="lbl">匯出 PDF<small>存到手機或列印</small></span><span class="chev">›</span></button>
+      <button class="btn" data-act="addPageScan"><span class="ic">＋</span><span class="lbl">加頁面<small>再拍幾頁加進來</small></span><span class="chev">›</span></button>
+    </div>
+  </div>`;
+  }
   return `
   <div class="topbar">
     <button class="iconbtn" data-act="home">‹</button>
@@ -88,6 +117,11 @@ function viewSet() {
       <button class="btn" data-act="readerOpen"><span class="ic">📖</span><span class="lbl">讀題（放大看圖）<small>可放大、可只顯示左半或右半</small></span><span class="chev">›</span></button>
       <button class="btn" data-act="keys"><span class="ic">🔑</span><span class="lbl">設定正解<small>${keyed ? `已設定 ${keyed} / ${total} 題` : '照書上解答點一次就好'}</small></span><span class="chev">›</span></button>
       <button class="btn" data-act="grade" ${canGrade ? '' : 'disabled'}><span class="ic">✅</span><span class="lbl">批改<small>${canGrade ? '看成績與錯題' : (keyed ? '先作答才能批改' : '要先設定正解')}</small></span><span class="chev">›</span></button>
+      <div class="row2">
+        <button class="btn" data-act="addRolePage" data-v="book" style="padding:12px;font-size:13px">＋ 題本頁</button>
+        <button class="btn" data-act="addRolePage" data-v="key" style="padding:12px;font-size:13px">＋ 解答頁</button>
+      </div>
+      <input type="file" id="fileInSet" accept="image/*" multiple hidden>
     </div>
   </div>`;
 }
@@ -124,6 +158,7 @@ function viewQuiz(isKey) {
       <div class="qno">${n}<small> 題</small></div>
       ${Q && Q.zq && !audioOnly ? `<button class="chipbtn ${S.showZh ? 'on' : ''}" data-act="zh">中文</button>` : ''}
       ${Q && Q.a ? `<button class="chipbtn ${S.showStem ? 'on' : ''}" data-act="stem">${S.showStem ? '隱藏' : '顯示'}</button>` : ''}
+      ${isKey ? `<button class="chipbtn" data-act="openKeyPage">解答</button>` : ''}
       <button class="btn" style="width:auto;padding:9px 13px;font-size:13px;margin-left:auto" data-act="openQ" data-v="${n}"><span class="ic">📄</span>原圖</button>
     </div>
     ${audioOnly ? `<div class="audiohint"><span class="ah-ic">🎧</span><div><b>純聽力作答</b><span>聽音檔，選出最適合的回應。要看作答內容再按上面的「顯示」。</span></div></div>` : ''}
@@ -250,35 +285,50 @@ function viewDetail() {
   </div>`;
 }
 
-/* ---------- 新增題組 ---------- */
+/* ---------- 新增（掃描閱讀 / 題本 / 解答） ---------- */
+const KIND_DESC = {
+  scan: '照片會轉成掃描檔：自動提高對比、去掉灰底，變成可以放大閱讀的文件，也能匯出 PDF。',
+  book: '題本頁：只有題目、沒有答案。作答完再到「設定正解」對答案。',
+  key: '解答／詳解頁：有正確答案或中文翻譯，對答案、看詳解時用。'
+};
 function viewImport() {
   const im = S.imp;
   return `
   <div class="topbar">
     <button class="iconbtn" data-act="home">✕</button>
-    <h1>新增題組</h1>
+    <h1>新增</h1>
   </div>
   <div class="scroll">
     <div class="pad">
+      <div class="kindrow">
+        <button class="kindbtn ${im.kind === 'scan' ? 'on' : ''}" data-act="kind" data-v="scan"><span class="k-ic">📄</span>掃描閱讀</button>
+        <button class="kindbtn ${im.kind === 'book' ? 'on' : ''}" data-act="kind" data-v="book"><span class="k-ic">✏️</span>題目<br>題本</button>
+        <button class="kindbtn ${im.kind === 'key' ? 'on' : ''}" data-act="kind" data-v="key"><span class="k-ic">🔑</span>題目<br>解答</button>
+      </div>
+      <div class="tiny muted" style="margin-bottom:14px;line-height:1.6">${KIND_DESC[im.kind] || KIND_DESC.book}</div>
+      ${im.kind === 'scan' ? `<div class="seg" style="margin:0 0 14px">
+        <button class="${im.mode === 'gray' ? 'on' : ''}" data-act="scanmode" data-v="gray">灰階清晰</button>
+        <button class="${im.mode === 'bw' ? 'on' : ''}" data-act="scanmode" data-v="bw">黑白文件</button>
+      </div>` : ''}
       <div class="pickzone" data-act="pickfiles">
         <span class="ic">🖼</span>
-        ${im.busy ? `<b>${esc(im.note || '處理中…')}</b>` : (im.pages.length ? `已選 <b>${im.pages.length}</b> 張，再按這裡可以繼續加` : '按這裡選截圖<br><span class="tiny">（一次可以選很多張，順序就是頁面順序）</span>')}
+        ${im.busy ? `<b>${esc(im.note || '處理中…')}</b>` : (im.pages.length ? `已選 <b>${im.pages.length}</b> 張，再按這裡可以繼續加` : '按這裡選照片<br><span class="tiny">（一次可以選很多張，順序就是頁面順序）</span>')}
       </div>
       <input type="file" id="fileIn" accept="image/*" multiple hidden>
       ${im.pages.length ? `<div class="thumbs">${im.pages.map((p, i) => `<div class="th"><img src="${p.url}" alt=""><div class="n">${i + 1}</div><div class="x" data-act="rmpage" data-v="${i}">✕</div></div>`).join('')}</div>` : ''}
       <div class="field">
-        <label>題組名稱</label>
-        <input type="text" id="impName" value="${esc(im.name)}" placeholder="例：Test 1 Part 3–4">
+        <label>名稱</label>
+        <input type="text" id="impName" value="${esc(im.name)}" placeholder="${im.kind === 'scan' ? '例：課本第 3 章' : '例：Test 1 Part 3–4'}">
       </div>
-      <div class="row2">
+      ${im.kind === 'scan' ? '' : `<div class="row2">
         <div class="field"><label>第幾題開始</label><input type="number" id="impFrom" value="${im.qFrom}" inputmode="numeric"></div>
         <div class="field"><label>第幾題結束</label><input type="number" id="impTo" value="${im.qTo}" inputmode="numeric"></div>
       </div>
-      <div class="tiny muted" style="margin-bottom:18px">例：這幾頁是 65 到 76 題，就填 65 和 76。作答時一題一個畫面。</div>
+      <div class="tiny muted" style="margin-bottom:18px">例：這幾頁是 65 到 76 題，就填 65 和 76。作答時一題一個畫面。</div>`}
     </div>
   </div>
   <div class="fabwrap">
-    <button class="btn primary" data-act="create" ${im.pages.length && !im.busy ? '' : 'disabled'}>建立題組（${im.pages.length} 張圖）</button>
+    <button class="btn primary" data-act="create" ${im.pages.length && !im.busy ? '' : 'disabled'}>${im.kind === 'scan' ? '建立掃描文件' : '建立題組'}（${im.pages.length} 張）</button>
   </div>`;
 }
 
@@ -381,6 +431,9 @@ function render() {
 }
 
 function after() {
+  try { afterBind(); } catch (e) { console.error('bind error', e); }
+}
+function afterBind() {
   // 閱讀器
   const rimg = document.getElementById('rimg');
   if (rimg) {
@@ -397,13 +450,15 @@ function after() {
   if (impName) {
     impName.oninput = () => { S.imp.name = impName.value; };
     const fi = document.getElementById('impFrom'), ft = document.getElementById('impTo');
-    fi.oninput = () => { S.imp.qFrom = +fi.value || 1; };
-    ft.oninput = () => { S.imp.qTo = +ft.value || 1; };
+    if (fi) fi.oninput = () => { S.imp.qFrom = +fi.value || 1; };
+    if (ft) ft.oninput = () => { S.imp.qTo = +ft.value || 1; };
   }
   const f1 = document.getElementById('fileIn');
   if (f1) f1.onchange = e => handleFiles(e.target.files, false);
   const f2 = document.getElementById('fileIn2');
   if (f2) f2.onchange = e => handleFiles(e.target.files, true);
+  const f3 = document.getElementById('fileInSet');
+  if (f3) f3.onchange = e => handleFiles(e.target.files, true, S.setRole || 'book');
   // 詳解筆記
   const note = document.getElementById('note');
   if (note) {
@@ -528,29 +583,36 @@ function bindReaderGestures() {
 }
 
 /* ---------- 選圖 / 建檔 ---------- */
-async function handleFiles(files, appendToSet) {
+async function handleFiles(files, appendToSet, role) {
   const arr = [...(files || [])];
   if (!arr.length) return;
+  const isScan = appendToSet ? S.set && S.set.kind === 'scan' : S.imp.kind === 'scan';
+  const mode = S.imp.mode || 'gray';
+
   if (appendToSet) {
     S.imp.busy = true;
     for (let i = 0; i < arr.length; i++) {
       try {
         const p = await compressFile(arr[i]);
+        if (isScan) p.url = await enhanceDataUrl(p.url, mode);
+        p.role = isScan ? 'scan' : (role || 'book');
         S.set.pages.push(p);
       } catch (e) { toast('有圖片讀不進來'); }
     }
     save();
     S.imp.busy = false;
     render();
-    toast('已加入頁面');
+    toast('已加入 ' + arr.length + ' 頁');
     return;
   }
+
   S.imp.busy = true;
   for (let i = 0; i < arr.length; i++) {
     S.imp.note = `處理中 ${i + 1} / ${arr.length}…`;
     render();
     try {
       const p = await compressFile(arr[i]);
+      if (isScan) p.url = await enhanceDataUrl(p.url, mode);
       S.imp.pages.push(p);
     } catch (e) { /* 跳過壞圖 */ }
   }
@@ -571,11 +633,20 @@ document.addEventListener('click', async e => {
     case 'new': {
       const sorted = S.sets.slice().sort((a, b) => b.qTo - a.qTo);
       const from = sorted.length ? sorted[0].qTo + 1 : 1;
-      S.imp = { pages: [], name: '', qFrom: from, qTo: from + 29, busy: false, note: '' };
+      S.imp = { pages: [], name: '', qFrom: from, qTo: from + 29, busy: false, note: '', kind: 'book', mode: 'gray' };
       S.screen = 'import'; render(); break;
     }
+    case 'kind': { S.imp.kind = v; render(); break; }
+    case 'scanmode': { S.imp.mode = v; render(); break; }
     case 'pickfiles': { const f = document.getElementById('fileIn'); if (f) f.click(); break; }
     case 'addPage': { const f = document.getElementById('fileIn2'); if (f) f.click(); break; }
+    case 'addRolePage': {
+      S.setRole = v;
+      const f = document.getElementById('fileInSet');
+      if (f) f.click();
+      break;
+    }
+    case 'pdf': exportPDF(S.set); break;
     case 'rmpage': { S.imp.pages.splice(+v, 1); render(); break; }
     case 'rmPage': {
       if (S.set.pages.length <= 1) return toast('至少要留一張圖');
@@ -583,20 +654,23 @@ document.addEventListener('click', async e => {
     }
     case 'create': {
       if (!S.imp.pages.length) return;
+      const isScan = S.imp.kind === 'scan';
+      const role = S.imp.kind === 'key' ? 'key' : 'book';
+      const nm = S.imp.name.trim() || (isScan ? '掃描文件 ' : '題組 ') + new Date().toLocaleDateString('zh-TW');
       const set = {
-        id: uid(),
-        name: S.imp.name.trim() || ('題組 ' + new Date().toLocaleDateString('zh-TW')),
+        id: uid(), name: nm, kind: isScan ? 'scan' : 'quiz',
         createdAt: Date.now(), updatedAt: Date.now(),
-        qFrom: Math.max(1, S.imp.qFrom), qTo: Math.max(Math.max(1, S.imp.qFrom), S.imp.qTo),
-        pages: S.imp.pages.slice(),
-        key: {}, answers: {}, notes: {}, lastScore: null
+        qFrom: isScan ? 0 : Math.max(1, S.imp.qFrom),
+        qTo: isScan ? 0 : Math.max(Math.max(1, S.imp.qFrom), S.imp.qTo),
+        pages: S.imp.pages.map(p => ({ ...p, role: isScan ? 'scan' : role })),
+        questions: {}, key: {}, answers: {}, notes: {}, lastScore: null
       };
       await dbPut(set);
       S.sets.unshift({ ...set, pageCount: set.pages.length, pages: [] });
-      S.imp = { pages: [], name: '', qFrom: 1, qTo: 30, busy: false, note: '' };
-      S.set = set; S.screen = 'set'; S.q = 0;
+      S.imp = { pages: [], name: '', qFrom: 1, qTo: 30, busy: false, note: '', kind: 'book', mode: 'gray' };
+      S.set = set; S.screen = 'set'; S.q = 0; S.overlay = isScan ? 'reader' : null;
       render();
-      toast('題組建立好了');
+      toast(isScan ? '掃描文件建立好了' : '題組建立好了');
       break;
     }
     case 'open': {
@@ -676,6 +750,12 @@ document.addEventListener('click', async e => {
       S.sets.unshift({ ...b, pageCount: b.pages.length, pages: [] });
       S.set = b; S.screen = 'set'; S.q = 0;
       render(); toast('內建題組已加入'); break;
+    }
+    case 'openKeyPage': {
+      const idx = S.set.pages.findIndex(p => p.role === 'key');
+      S.reader.page = idx < 0 ? 0 : idx;
+      S.reader.s = 1; S.reader.tx = 0; S.reader.ty = 0; S.reader.col = 'full';
+      S.overlay = 'reader'; render(); break;
     }
     case 'openPage': S.reader.page = +v; S.reader.s = 1; S.reader.tx = 0; S.reader.ty = 0; S.reader.col = 'full'; S.overlay = 'reader'; render(); break;
     case 'closeReader': S.overlay = null; render(); break;
